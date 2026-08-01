@@ -1031,8 +1031,6 @@ def render_victory(game):
     hero = game["hero"]
     st.success("深淵已淨化")
     st.markdown(f"你以 Lv.{hero.level} 的 {hero.name} 之姿，走出了地城。")
-    if st.button("再來一局"):
-        start_new_game()
 
 
 def main():
