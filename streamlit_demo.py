@@ -497,10 +497,13 @@ def start_boss_fight(game=None):
     game["enemy"] = Enemy(boss_data, floor=game["floor"], is_boss=True)
     game["phase"] = "battle"
     save_game(game)
-    if game.get("chapter", 1) == 1:
+    chapter = game.get("chapter", 1)
+    if chapter == 1:
         log("👑 深淵王甦醒，注視著你……")
-    else:
+    elif chapter == 2:
         log("🌫️ 霧中巨影現身，迷霧領主向你發出冷笑……")
+    else:
+        log("👑 幽冥王座震顫，幽冥領主現身，黑焰席捲四方……")
 
 
 def advance_floor(game=None):
@@ -916,6 +919,10 @@ def render_battle_screen(game):
     if not hero or not enemy:
         return
 
+    enemy_icon_display = enemy.icon
+    if enemy.is_boss:
+        enemy_icon_display = f"<span style='font-size:1.8rem; vertical-align:-0.15rem;'>{enemy.icon}</span>"
+
     st.markdown("**⚔️ 戰鬥中**")
     col_left, col_right = st.columns(2)
     with col_left:
@@ -932,7 +939,7 @@ def render_battle_screen(game):
     with col_right:
         st.markdown("<div style='font-size:0.88rem; line-height:1.35; padding-left: 0.5rem;'>"
                     f"<strong>敵人</strong><br>"
-                    f"敵人：{enemy.icon} {enemy.name}<br>"
+                    f"敵人：{enemy_icon_display} {enemy.name}<br>"
                     f"HP：{enemy.hp}/{enemy.hp_max}<br>"
                     f"攻擊 / 防禦：{enemy.atk} / {enemy.defense}<br>"
                     f"</div>", unsafe_allow_html=True)
@@ -1187,9 +1194,17 @@ def main():
 
     with right_col:
         st.subheader("📝 冒險紀錄")
+        boss_encounter_messages = {
+            "👑 深淵王甦醒，注視著你……",
+            "🌫️ 霧中巨影現身，迷霧領主向你發出冷笑……",
+            "👑 幽冥王座震顫，幽冥領主現身，黑焰席捲四方……",
+        }
         if game["messages"]:
             for message in reversed(game["messages"]):
-                st.write(message)
+                if message in boss_encounter_messages:
+                    st.markdown(f"**{message}**")
+                else:
+                    st.write(message)
         else:
             st.write("尚無冒險紀錄。")
 
