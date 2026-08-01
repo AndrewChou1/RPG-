@@ -787,7 +787,7 @@ def render_sidebar():
                     f"{group['icon']} {group['name']}*{group['count']} "
                     f"[+{group['atk_total']} ATK] [+{group['def_total']} DEF]"
                 )
-            st.sidebar.text("戒指：" + ", ".join(ring_labels))
+            st.sidebar.markdown("戒指：<br>" + "<br>".join(ring_labels), unsafe_allow_html=True)
         else:
             st.sidebar.caption("戒指：尚未裝備")
 
