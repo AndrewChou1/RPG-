@@ -384,6 +384,7 @@ def init_game_state():
         "enemy": None,
         "chapter": 1,
         "floor": 0,
+        "battle_turn": "player",
         "messages": [],
     }
 
@@ -497,6 +498,7 @@ def start_new_game():
         "enemy": None,
         "chapter": 1,
         "floor": 0,
+        "battle_turn": "player",
         "messages": [f"{player_name} 推開地城厚重的石門，冷風夾雜著霉味撲面而來。"],
     })
     save_game(game)
@@ -508,6 +510,7 @@ def start_boss_fight(game=None):
     boss_data = current_boss_data(game)
     game["enemy"] = Enemy(boss_data, floor=game["floor"], is_boss=True)
     game["phase"] = "battle"
+    game["battle_turn"] = "player"
     save_game(game)
     chapter = game.get("chapter", 1)
     if chapter == 1:
@@ -556,6 +559,13 @@ def handle_explore(action):
     game = st.session_state.game
     hero = game["hero"]
     if action == "continue":
+        if game.get("enemy"):
+            game["phase"] = "battle"
+            game["battle_turn"] = "player"
+            save_game(game)
+            if hasattr(st, "rerun"):
+                st.rerun()
+            return
         if game["floor"] == TOTAL_FLOORS - 1:
             start_boss_fight(game)
             return
@@ -564,8 +574,9 @@ def handle_explore(action):
             pool = current_enemy_pool(game)
             base = random.choice(pool[: min(len(pool), game["floor"] + 2)])
             game["enemy"] = Enemy(base, floor=game["floor"])
-            game["phase"] = "battle"
             log(f"{game['enemy'].icon} {game['enemy'].name} 擋住了去路！")
+            save_game(game)
+            return
         elif roll < 0.85:
             gold = random.randint(8, 20) + game["floor"] * 3
             hero.gold += gold
@@ -629,23 +640,10 @@ def resolve_battle_action(game, action, item_key=None):
             log("你成功逃離了戰鬥。", game=game)
             game["phase"] = "explore"
             game["enemy"] = None
+            game["battle_turn"] = "player"
             save_game(game)
             return game
         log("逃跑失敗！", game=game)
-
-    if enemy.is_alive() and action != "run":
-        if enemy.can_cast_skill():
-            enemy.mp = clamp(enemy.mp - enemy.skill_mp, 0, enemy.mp_max)
-            damage = max(
-                1,
-                round(enemy.atk * enemy.skill_mult) + random.randint(-1, 4) - round(hero.defense * 0.55),
-            )
-            hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
-            log(f"{enemy.name} 施展【{enemy.skill_name}】，你受到 {damage} 點傷害！", game=game)
-        else:
-            damage = max(1, enemy.atk + random.randint(-2, 3) - hero.defense)
-            hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
-            log(f"{enemy.name} 反擊，你受到 {damage} 點傷害。", game=game)
 
     if not enemy.is_alive():
         gold = random.randint(*enemy.gold_range)
@@ -674,9 +672,45 @@ def resolve_battle_action(game, action, item_key=None):
             game["phase"] = "explore"
             advance_floor(game)
             return game
+        game["battle_turn"] = "player"
         save_game(game)
         return game
 
+    if enemy.is_alive() and action != "run":
+        game["battle_turn"] = "enemy"
+        save_game(game)
+        return game
+
+    if not hero.is_alive():
+        game["phase"] = "gameover"
+        game["battle_turn"] = "player"
+        log("你倒下了……", game=game)
+    save_game(game)
+    return game
+
+
+def resolve_enemy_turn(game):
+    hero = game["hero"]
+    enemy = game["enemy"]
+    if not hero or not enemy or not enemy.is_alive():
+        game["battle_turn"] = "player"
+        save_game(game)
+        return game
+
+    if enemy.can_cast_skill():
+        enemy.mp = clamp(enemy.mp - enemy.skill_mp, 0, enemy.mp_max)
+        damage = max(
+            1,
+            round(enemy.atk * enemy.skill_mult) + random.randint(-1, 4) - round(hero.defense * 0.55),
+        )
+        hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
+        log(f"{enemy.name} 施展【{enemy.skill_name}】，你受到 {damage} 點傷害！", game=game)
+    else:
+        damage = max(1, enemy.atk + random.randint(-2, 3) - hero.defense)
+        hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
+        log(f"{enemy.name} 反擊，你受到 {damage} 點傷害。", game=game)
+
+    game["battle_turn"] = "player"
     if not hero.is_alive():
         game["phase"] = "gameover"
         log("你倒下了……", game=game)
@@ -910,20 +944,21 @@ def render_explore_screen(game):
     hero = game["hero"]
     chapter_label = current_chapter_title(game)
     st.subheader(f"{chapter_label} · 第 {game['floor'] + 1} 層")
-    explore_button_label = "戰鬥!!" if game.get("enemy") else "繼續探索"
+    has_enemy = bool(game.get("enemy"))
+    explore_button_label = "戰鬥!!" if has_enemy else "繼續探索"
     col1, col2 = st.columns(2)
     with col1:
         if st.button(explore_button_label, use_container_width=True):
             handle_explore("continue")
     with col2:
-        if st.button("造訪商人", use_container_width=True):
+        if st.button("造訪商人", use_container_width=True, disabled=has_enemy):
             handle_explore("shop")
     col3, col4 = st.columns(2)
     with col3:
-        if st.button("就地歇息（💰10）", use_container_width=True):
+        if st.button("就地歇息（💰10）", use_container_width=True, disabled=has_enemy):
             handle_explore("rest")
     with col4:
-        if st.button("查看背包", use_container_width=True):
+        if st.button("查看背包", use_container_width=True, disabled=has_enemy):
             handle_explore("inventory")
 
     st.write("背包：")
@@ -938,6 +973,12 @@ def render_battle_screen(game):
     hero = game["hero"]
     enemy = game["enemy"]
     if not hero or not enemy:
+        return
+
+    if game.get("battle_turn") == "enemy":
+        resolve_enemy_turn(game)
+        if hasattr(st, "rerun"):
+            st.rerun()
         return
 
     enemy_icon_display = enemy.icon
@@ -972,16 +1013,16 @@ def render_battle_screen(game):
     st.markdown("<div style='font-size:0.92rem; line-height:1.4;'>選擇你的行動：</div>", unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        if st.button("⚔️ 攻擊", use_container_width=True):
+        if st.button("⚔️ 攻擊", use_container_width=True, disabled=(game.get("battle_turn") != "player")):
             handle_battle("attack")
     with col2:
-        if st.button("✨ 技能", use_container_width=True):
+        if st.button("✨ 技能", use_container_width=True, disabled=(game.get("battle_turn") != "player")):
             handle_battle("skill")
     with col3:
-        if st.button("🏃 逃跑", use_container_width=True):
+        if st.button("🏃 逃跑", use_container_width=True, disabled=(game.get("battle_turn") != "player")):
             handle_battle("run")
     with col4:
-        if st.button("🎒 背包", use_container_width=True):
+        if st.button("🎒 背包", use_container_width=True, disabled=(game.get("battle_turn") != "player")):
             pass
 
     for item_id, item in SHOP_ITEMS.items():
@@ -1195,6 +1236,7 @@ def main():
         render_left_panel()
 
     game = st.session_state.game
+    game.setdefault("battle_turn", "player")
     with center_col:
         if game["phase"] not in ("battle", "shop"):
             render_status(game)
