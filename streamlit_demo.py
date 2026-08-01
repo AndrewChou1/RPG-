@@ -103,31 +103,31 @@ SHOP_ACTION_LOCK_SECONDS = 0.8
 TOTAL_FLOORS = 6
 
 SECOND_CHAPTER_ENEMIES = [
-    {"name": "迷霧狂獸", "icon": "🐗", "hp": 34, "atk": 10, "def": 3, "gold": (12, 16), "xp": 16},
-    {"name": "記憶妖精", "icon": "🧚", "hp": 29, "atk": 8, "def": 3, "gold": (12, 18), "xp": 16},
-    {"name": "霧影弓手", "icon": "🏹", "hp": 40, "atk": 12, "def": 5, "gold": (14, 20), "xp": 20},
-    {"name": "沉睡巨岩", "icon": "🪨", "hp": 54, "atk": 11, "def": 9, "gold": (16, 22), "xp": 24},
-    {"name": "幽魂術士", "icon": "👻", "hp": 38, "atk": 14, "def": 4, "gold": (18, 24), "xp": 26},
-    {"name": "破曉獵人", "icon": "🦅", "hp": 44, "atk": 13, "def": 6, "gold": (20, 26), "xp": 28},
+    {"name": "迷霧狂獸", "icon": "🐗", "hp": 42, "atk": 12, "def": 4, "gold": (15, 20), "xp": 20},
+    {"name": "記憶妖精", "icon": "🧚", "hp": 36, "atk": 10, "def": 4, "gold": (15, 22), "xp": 20},
+    {"name": "霧影弓手", "icon": "🏹", "hp": 48, "atk": 15, "def": 6, "gold": (18, 25), "xp": 25},
+    {"name": "沉睡巨岩", "icon": "🪨", "hp": 65, "atk": 14, "def": 11, "gold": (20, 28), "xp": 30},
+    {"name": "幽魂術士", "icon": "👻", "hp": 46, "atk": 17, "def": 5, "gold": (22, 30), "xp": 32},
+    {"name": "破曉獵人", "icon": "🦅", "hp": 53, "atk": 16, "def": 7, "gold": (24, 32), "xp": 34},
 ]
 
 SECOND_CHAPTER_BOSS = {
     "name": "迷霧領主 · 塞勒斯", "icon": "🌫️",
-    "hp": 120, "atk": 15, "def": 6, "gold": (80, 110), "xp": 120,
+    "hp": 175, "atk": 22, "def": 10, "gold": (100, 140), "xp": 150,
 }
 
 THIRD_CHAPTER_ENEMIES = [
-    {"name": "幽冥魍魎", "icon": "👹", "hp": 44, "atk": 14, "def": 4, "gold": (18, 26), "xp": 24},
-    {"name": "獄焰守衛", "icon": "🔥", "hp": 50, "atk": 16, "def": 6, "gold": (20, 28), "xp": 28},
-    {"name": "黑暗刺客", "icon": "🗡️", "hp": 44, "atk": 17, "def": 5, "gold": (20, 30), "xp": 30},
-    {"name": "破碎巨像", "icon": "🪨", "hp": 60, "atk": 15, "def": 10, "gold": (24, 34), "xp": 34},
-    {"name": "深淵魔鱗", "icon": "🐉", "hp": 56, "atk": 18, "def": 7, "gold": (26, 38), "xp": 36},
-    {"name": "幻影術師", "icon": "🧙‍♂️", "hp": 52, "atk": 20, "def": 5, "gold": (28, 40), "xp": 38},
+    {"name": "幽冥魍魎", "icon": "👹", "hp": 54, "atk": 17, "def": 6, "gold": (24, 34), "xp": 30},
+    {"name": "獄焰守衛", "icon": "🔥", "hp": 62, "atk": 20, "def": 8, "gold": (26, 36), "xp": 35},
+    {"name": "黑暗刺客", "icon": "🗡️", "hp": 54, "atk": 21, "def": 7, "gold": (26, 38), "xp": 38},
+    {"name": "破碎巨像", "icon": "🪨", "hp": 75, "atk": 19, "def": 13, "gold": (30, 44), "xp": 42},
+    {"name": "深淵魔鱗", "icon": "🐉", "hp": 70, "atk": 22, "def": 9, "gold": (32, 48), "xp": 45},
+    {"name": "幻影術師", "icon": "🧙‍♂️", "hp": 65, "atk": 24, "def": 7, "gold": (34, 50), "xp": 48},
 ]
 
 THIRD_CHAPTER_BOSS = {
     "name": "幽冥領主 · 阿斯拉", "icon": "👑",
-    "hp": 150, "atk": 18, "def": 8, "gold": (100, 140), "xp": 160,
+    "hp": 230, "atk": 27, "def": 13, "gold": (130, 180), "xp": 210,
 }
 
 CHAPTER_TITLES = {
@@ -1006,13 +1006,19 @@ def render_chapter_complete(game):
         st.write("你獲得了片刻的平靜，但遠方的迷霧仍在呼喚你。")
         if st.button("進入第二章：深淵之外"):
             start_chapter_two(game)
+            if hasattr(st, "rerun"):
+                st.rerun()
     else:
         st.success("第二章完結：迷霧已被突破。")
         st.write("你已走過迷霧深處，幽冥之巔的最終考驗即將展開。")
         if st.button("進入第三章：幽冥之巔"):
             start_chapter_three(game)
+            if hasattr(st, "rerun"):
+                st.rerun()
     if st.button("返回主選單"):
         start_new_game()
+        if hasattr(st, "rerun"):
+            st.rerun()
 
 
 def render_game_over(game):
