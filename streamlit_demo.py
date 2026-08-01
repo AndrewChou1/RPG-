@@ -966,7 +966,23 @@ def render_shop_screen(game):
     if not hero:
         return
     st.subheader("🛒 商店")
-    st.write(f"你的金幣：💰{hero.gold}")
+    st.markdown(
+        f"""
+        <div style="
+            margin: 0.35rem 0 1rem 0;
+            padding: 0.6rem 0.9rem;
+            font-size: 2rem;
+            font-weight: 900;
+            line-height: 1.15;
+            color: #1f1300;
+            background: linear-gradient(90deg, #ffe082 0%, #ffd54f 100%);
+            border: 2px solid #f9a825;
+            border-radius: 0.65rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        ">你的金幣：💰{hero.gold}</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     section = st.session_state.get("shop_section", "menu")
 
@@ -1149,7 +1165,7 @@ def main():
 
     game = st.session_state.game
     with center_col:
-        if game["phase"] != "battle":
+        if game["phase"] not in ("battle", "shop"):
             render_status(game)
 
         if game["phase"] == "start":
