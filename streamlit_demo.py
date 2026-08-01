@@ -75,7 +75,8 @@ ENEMY_POOL = [
 
 BOSS = {
     "name": "深淵王 · 莫拉葛斯", "icon": "👹",
-    "hp": 90, "atk": 13, "def": 5, "gold": (60, 90), "xp": 80,
+    "hp": 90, "mp": 24, "atk": 13, "def": 5, "gold": (60, 90), "xp": 80,
+    "skill_name": "深淵震擊", "skill_mp": 8, "skill_mult": 1.8, "skill_rate": 0.45,
 }
 
 SHOP_ITEMS = {
@@ -113,7 +114,8 @@ SECOND_CHAPTER_ENEMIES = [
 
 SECOND_CHAPTER_BOSS = {
     "name": "迷霧領主 · 塞勒斯", "icon": "🌫️",
-    "hp": 175, "atk": 22, "def": 10, "gold": (100, 140), "xp": 150,
+    "hp": 175, "mp": 36, "atk": 22, "def": 10, "gold": (100, 140), "xp": 150,
+    "skill_name": "迷霧崩解", "skill_mp": 10, "skill_mult": 1.9, "skill_rate": 0.5,
 }
 
 THIRD_CHAPTER_ENEMIES = [
@@ -127,7 +129,8 @@ THIRD_CHAPTER_ENEMIES = [
 
 THIRD_CHAPTER_BOSS = {
     "name": "幽冥領主 · 阿斯拉", "icon": "👑",
-    "hp": 230, "atk": 27, "def": 13, "gold": (130, 180), "xp": 210,
+    "hp": 230, "mp": 45, "atk": 27, "def": 13, "gold": (130, 180), "xp": 210,
+    "skill_name": "幽冥滅燼", "skill_mp": 12, "skill_mult": 2.0, "skill_rate": 0.55,
 }
 
 CHAPTER_TITLES = {
@@ -355,14 +358,23 @@ class Enemy:
         self.icon = data["icon"]
         self.hp_max = round(data["hp"] * mult)
         self.hp = self.hp_max
+        self.mp_max = data.get("mp", 0)
+        self.mp = self.mp_max
         self.atk = round(data["atk"] * mult)
         self.defense = data["def"] + (floor // 2 if not is_boss else 0)
         self.gold_range = (round(data["gold"][0] * mult), round(data["gold"][1] * mult))
         self.xp = round(data["xp"] * mult)
+        self.skill_name = data.get("skill_name")
+        self.skill_mp = data.get("skill_mp", 0)
+        self.skill_mult = data.get("skill_mult", 1.0)
+        self.skill_rate = data.get("skill_rate", 0.0)
         self.is_boss = is_boss
 
     def is_alive(self):
         return self.hp > 0
+
+    def can_cast_skill(self):
+        return bool(self.skill_name) and self.mp >= self.skill_mp and random.random() < self.skill_rate
 
 
 def init_game_state():
@@ -622,9 +634,18 @@ def resolve_battle_action(game, action, item_key=None):
         log("逃跑失敗！", game=game)
 
     if enemy.is_alive() and action != "run":
-        damage = max(1, enemy.atk + random.randint(-2, 3) - hero.defense)
-        hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
-        log(f"{enemy.name} 反擊，你受到 {damage} 點傷害。", game=game)
+        if enemy.can_cast_skill():
+            enemy.mp = clamp(enemy.mp - enemy.skill_mp, 0, enemy.mp_max)
+            damage = max(
+                1,
+                round(enemy.atk * enemy.skill_mult) + random.randint(-1, 4) - round(hero.defense * 0.55),
+            )
+            hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
+            log(f"{enemy.name} 施展【{enemy.skill_name}】，你受到 {damage} 點傷害！", game=game)
+        else:
+            damage = max(1, enemy.atk + random.randint(-2, 3) - hero.defense)
+            hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
+            log(f"{enemy.name} 反擊，你受到 {damage} 點傷害。", game=game)
 
     if not enemy.is_alive():
         gold = random.randint(*enemy.gold_range)
@@ -941,9 +962,12 @@ def render_battle_screen(game):
                     f"<strong>敵人</strong><br>"
                     f"敵人：{enemy_icon_display} {enemy.name}<br>"
                     f"HP：{enemy.hp}/{enemy.hp_max}<br>"
+                    f"MP：{enemy.mp}/{enemy.mp_max}<br>"
                     f"攻擊 / 防禦：{enemy.atk} / {enemy.defense}<br>"
                     f"</div>", unsafe_allow_html=True)
         render_red_hp_bar(enemy.hp, enemy.hp_max, f"敵人 HP：{enemy.hp}/{enemy.hp_max}")
+        if enemy.mp_max > 0:
+            render_blue_mp_bar(enemy.mp, enemy.mp_max, f"敵人 MP：{enemy.mp}/{enemy.mp_max}")
 
     st.markdown("<div style='font-size:0.92rem; line-height:1.4;'>選擇你的行動：</div>", unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
