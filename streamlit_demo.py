@@ -50,12 +50,18 @@ ACCESSORIES = {
     "crystal_ball": {"key": "crystal_ball", "name": "水晶球", "icon": "🔮", "required_class": "mage", "mp_bonus": 10, "atk_bonus": 0, "def_bonus": 0, "desc": "法師的神秘道具，讓魔力更為集中。"},
     "cloak": {"key": "cloak", "name": "披風", "icon": "🧥", "required_class": "rogue", "atk_bonus": 1, "def_bonus": 1, "desc": "盜賊的隱匿披風，讓行動更靈巧。"},
     "shield": {"key": "shield", "name": "盾", "icon": "🛡️", "required_class": "warrior", "atk_bonus": 0, "def_bonus": 2, "desc": "戰士的堅固護盾，能更好地承受打擊。"},
+    "abyss_guard": {"key": "abyss_guard", "name": "深淵護印", "icon": "🛡️", "required_class": "warrior", "atk_bonus": 1, "def_bonus": 4, "desc": "深淵王殞落後留下的護印，大幅強化防禦。"},
+    "abyss_focus": {"key": "abyss_focus", "name": "深淵聚焦晶", "icon": "🔮", "required_class": "mage", "mp_bonus": 8, "atk_bonus": 3, "def_bonus": 1, "desc": "吸納地城魔力的晶核，強化法術輸出。"},
+    "abyss_step": {"key": "abyss_step", "name": "深淵影靴", "icon": "🥾", "required_class": "rogue", "atk_bonus": 3, "def_bonus": 2, "desc": "沾染深淵氣息的影靴，讓步伐更致命。"},
 }
 
 RINGS = {
     "ring_of_fortitude": {"key": "ring_of_fortitude", "name": "勇士之戒", "icon": "💍", "required_class": "warrior", "atk_bonus": 0, "def_bonus": 2, "desc": "強化守備，讓戰士更能扛住攻擊。"},
     "ring_of_arcana": {"key": "ring_of_arcana", "name": "秘法之戒", "icon": "💍", "required_class": "mage", "atk_bonus": 1, "def_bonus": 1, "desc": "提升魔力與法術精通。"},
     "ring_of_shadow": {"key": "ring_of_shadow", "name": "影舞之戒", "icon": "💍", "required_class": "rogue", "atk_bonus": 2, "def_bonus": 0, "desc": "加強靈巧與突襲能力。"},
+    "ring_of_dawn_guard": {"key": "ring_of_dawn_guard", "name": "曙光王戒", "icon": "💍", "required_class": "warrior", "atk_bonus": 2, "def_bonus": 3, "desc": "迷霧領主的核心化作王戒，令持有者屹立不倒。"},
+    "ring_of_dawn_flame": {"key": "ring_of_dawn_flame", "name": "曙光秘戒", "icon": "💍", "required_class": "mage", "atk_bonus": 4, "def_bonus": 1, "desc": "自迷霧盡頭凝成的秘戒，令法術更加熾烈。"},
+    "ring_of_dawn_edge": {"key": "ring_of_dawn_edge", "name": "曙光影戒", "icon": "💍", "required_class": "rogue", "atk_bonus": 4, "def_bonus": 1, "desc": "切裂晨霧的影戒，讓襲擊更凌厲。"},
 }
 
 ENEMY_POOL = [
@@ -92,15 +98,17 @@ WEAPON_UPGRADE_COSTS = {
     3: 55,
 }
 
+SHOP_ACTION_LOCK_SECONDS = 0.8
+
 TOTAL_FLOORS = 6
 
 SECOND_CHAPTER_ENEMIES = [
-    {"name": "迷霧狂獸", "icon": "🐗", "hp": 28, "atk": 8, "def": 2, "gold": (10, 14), "xp": 14},
-    {"name": "記憶妖精", "icon": "🧚", "hp": 24, "atk": 6, "def": 2, "gold": (10, 16), "xp": 14},
-    {"name": "霧影弓手", "icon": "🏹", "hp": 34, "atk": 10, "def": 4, "gold": (12, 18), "xp": 18},
-    {"name": "沉睡巨岩", "icon": "🪨", "hp": 46, "atk": 9, "def": 8, "gold": (14, 20), "xp": 22},
-    {"name": "幽魂術士", "icon": "👻", "hp": 32, "atk": 12, "def": 3, "gold": (16, 22), "xp": 24},
-    {"name": "破曉獵人", "icon": "🦅", "hp": 38, "atk": 11, "def": 5, "gold": (18, 24), "xp": 26},
+    {"name": "迷霧狂獸", "icon": "🐗", "hp": 34, "atk": 10, "def": 3, "gold": (12, 16), "xp": 16},
+    {"name": "記憶妖精", "icon": "🧚", "hp": 29, "atk": 8, "def": 3, "gold": (12, 18), "xp": 16},
+    {"name": "霧影弓手", "icon": "🏹", "hp": 40, "atk": 12, "def": 5, "gold": (14, 20), "xp": 20},
+    {"name": "沉睡巨岩", "icon": "🪨", "hp": 54, "atk": 11, "def": 9, "gold": (16, 22), "xp": 24},
+    {"name": "幽魂術士", "icon": "👻", "hp": 38, "atk": 14, "def": 4, "gold": (18, 24), "xp": 26},
+    {"name": "破曉獵人", "icon": "🦅", "hp": 44, "atk": 13, "def": 6, "gold": (20, 26), "xp": 28},
 ]
 
 SECOND_CHAPTER_BOSS = {
@@ -109,12 +117,12 @@ SECOND_CHAPTER_BOSS = {
 }
 
 THIRD_CHAPTER_ENEMIES = [
-    {"name": "幽冥魍魎", "icon": "👹", "hp": 36, "atk": 12, "def": 3, "gold": (16, 24), "xp": 20},
-    {"name": "獄焰守衛", "icon": "🔥", "hp": 42, "atk": 14, "def": 5, "gold": (18, 26), "xp": 24},
-    {"name": "黑暗刺客", "icon": "🗡️", "hp": 38, "atk": 15, "def": 4, "gold": (18, 28), "xp": 26},
-    {"name": "破碎巨像", "icon": "🪨", "hp": 52, "atk": 13, "def": 8, "gold": (22, 30), "xp": 30},
-    {"name": "深淵魔鱗", "icon": "🐉", "hp": 48, "atk": 16, "def": 6, "gold": (24, 34), "xp": 32},
-    {"name": "幻影術師", "icon": "🧙‍♂️", "hp": 44, "atk": 18, "def": 4, "gold": (26, 36), "xp": 34},
+    {"name": "幽冥魍魎", "icon": "👹", "hp": 44, "atk": 14, "def": 4, "gold": (18, 26), "xp": 24},
+    {"name": "獄焰守衛", "icon": "🔥", "hp": 50, "atk": 16, "def": 6, "gold": (20, 28), "xp": 28},
+    {"name": "黑暗刺客", "icon": "🗡️", "hp": 44, "atk": 17, "def": 5, "gold": (20, 30), "xp": 30},
+    {"name": "破碎巨像", "icon": "🪨", "hp": 60, "atk": 15, "def": 10, "gold": (24, 34), "xp": 34},
+    {"name": "深淵魔鱗", "icon": "🐉", "hp": 56, "atk": 18, "def": 7, "gold": (26, 38), "xp": 36},
+    {"name": "幻影術師", "icon": "🧙‍♂️", "hp": 52, "atk": 20, "def": 5, "gold": (28, 40), "xp": 38},
 ]
 
 THIRD_CHAPTER_BOSS = {
@@ -126,6 +134,19 @@ CHAPTER_TITLES = {
     1: "第一章：幽闇地城",
     2: "第二章：深淵之外",
     3: "第三章：幽冥之巔",
+}
+
+CHAPTER_BOSS_REWARDS = {
+    1: {
+        "warrior": {"slot": "accessory", "key": "abyss_guard"},
+        "mage": {"slot": "accessory", "key": "abyss_focus"},
+        "rogue": {"slot": "accessory", "key": "abyss_step"},
+    },
+    2: {
+        "warrior": {"slot": "ring", "key": "ring_of_dawn_guard"},
+        "mage": {"slot": "ring", "key": "ring_of_dawn_flame"},
+        "rogue": {"slot": "ring", "key": "ring_of_dawn_edge"},
+    },
 }
 
 
@@ -391,6 +412,23 @@ def normalize_ring(ring):
     }
 
 
+def grant_boss_reward(hero, chapter):
+    reward = CHAPTER_BOSS_REWARDS.get(chapter, {}).get(hero.class_key)
+    if not reward:
+        return None
+
+    if reward["slot"] == "accessory":
+        if not hero.equip_equipment(reward["key"]):
+            return None
+        item = ACCESSORIES[reward["key"]]
+    else:
+        if not hero.equip_ring(reward["key"]):
+            return None
+        item = RINGS[reward["key"]]
+
+    return f"首領的力量凝成獎勵：{item['icon']} {item['name']} 已自動裝備。"
+
+
 def log_selected_class_if_needed():
     game = st.session_state.get("game")
     if not game or game.get("phase") != "start":
@@ -496,6 +534,10 @@ def handle_explore(action):
     elif action == "shop":
         game["phase"] = "shop"
         log("流浪商人出現在陰影裡，向你揮了揮手。")
+        save_game(game)
+        if hasattr(st, "rerun"):
+            st.rerun()
+        return
     elif action == "rest":
         if hero.gold < 10:
             log("身上金幣不足，商人搖了搖頭，將你請出帳篷。")
@@ -559,6 +601,9 @@ def resolve_battle_action(game, action, item_key=None):
         game["enemy"] = None
         if enemy.is_boss:
             chapter = game.get("chapter", 1)
+            reward_message = grant_boss_reward(hero, chapter)
+            if reward_message:
+                log(reward_message, game=game)
             if chapter < 3:
                 game["phase"] = "chapter_complete"
                 if chapter == 1:
@@ -595,6 +640,10 @@ def should_process_purchase(item_key, session_state=None, now=None):
     if now is None:
         now = time.monotonic()
 
+    locked_until = session_state.get("_shop_action_locked_until", 0.0)
+    if now < locked_until:
+        return False
+
     last_time = session_state.get("_purchase_last_time", 0.0)
     last_key = session_state.get("_purchase_last_key")
     if last_key == item_key and now - last_time < 0.8:
@@ -602,14 +651,19 @@ def should_process_purchase(item_key, session_state=None, now=None):
 
     session_state["_purchase_last_time"] = now
     session_state["_purchase_last_key"] = item_key
+    session_state["_shop_action_locked_until"] = now + SHOP_ACTION_LOCK_SECONDS
     return True
 
 
-def buy_item(item_key):
-    if not should_process_purchase(item_key):
-        log("請稍等一下再點擊一次。")
-        return
+def is_shop_action_locked(session_state=None, now=None):
+    if session_state is None:
+        session_state = st.session_state
+    if now is None:
+        now = time.monotonic()
+    return now < session_state.get("_shop_action_locked_until", 0.0)
 
+
+def buy_item(item_key):
     game = st.session_state.game
     hero = game["hero"]
     item = SHOP_ITEMS[item_key]
@@ -638,11 +692,15 @@ def buy_item(item_key):
         hero.gold -= item["price"]
         log(f"你購買並裝備了 {item['icon']} {item['name']}。")
         save_game(game)
+        if hasattr(st, "rerun"):
+            st.rerun()
         return
     hero.gold -= item["price"]
     hero.inventory[item["key"]] += 1
     log(f"你購買了 {item['icon']} {item['name']}。")
     save_game(game)
+    if hasattr(st, "rerun"):
+        st.rerun()
 
 
 def upgrade_weapon_in_shop():
@@ -652,6 +710,8 @@ def upgrade_weapon_in_shop():
     log(message)
     if upgraded:
         save_game(game)
+        if hasattr(st, "rerun"):
+            st.rerun()
 
 
 def render_sidebar():
@@ -753,8 +813,8 @@ def render_sidebar():
 
 def render_header():
     st.set_page_config(page_title="幽闇地城", page_icon="🗡️", layout="wide")
-    st.title("🕯️ 幽闇地城 · Streamlit RPG")
-    st.caption("選擇職業、探索地城，迎向第二章的迷霧試煉。")
+    st.title("🕯️ 幽闇地城 ")
+    st.caption("選擇職業、探索地城，迎向迷霧試煉。")
 
 
 def render_status(game):
@@ -791,9 +851,10 @@ def render_explore_screen(game):
     hero = game["hero"]
     chapter_label = current_chapter_title(game)
     st.subheader(f"{chapter_label} · 第 {game['floor'] + 1} 層")
+    explore_button_label = "戰鬥!!" if game.get("enemy") else "繼續探索"
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("繼續探索", use_container_width=True):
+        if st.button(explore_button_label, use_container_width=True):
             handle_explore("continue")
     with col2:
         if st.button("造訪商人", use_container_width=True):
@@ -891,7 +952,7 @@ def render_shop_screen(game):
             if st.button(
                 f"強化武器到 {next_tag}（💰{cost}）",
                 key="upgrade_weapon",
-                disabled=hero.gold < cost,
+                disabled=(hero.gold < cost),
             ):
                 upgrade_weapon_in_shop()
 
@@ -909,11 +970,17 @@ def render_shop_screen(game):
         label = f"購買 {item['icon']} {item['name']}（💰{item['price']}）"
         if already_owned_accessory:
             label = f"已裝備配件，無法購買 {item['icon']} {item['name']}"
-        if st.button(label, key=f"buy_{item['key']}", disabled=(not affordable or already_owned_accessory)):
+        if st.button(
+            label,
+            key=f"buy_{item['key']}",
+            disabled=(not affordable or already_owned_accessory),
+        ):
             buy_item(item_id)
     if st.button("離開商店"):
         game["phase"] = "explore"
         save_game(game)
+        if hasattr(st, "rerun"):
+            st.rerun()
 
 
 def render_inventory_screen(game):
