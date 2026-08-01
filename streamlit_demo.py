@@ -1,0 +1,854 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Streamlit 版《幽闇地城》介面。
+
+這個檔案是測試用的 Streamlit 介面版本，
+用來展示文字 RPG 遊戲如何在瀏覽器中執行。
+
+執行方式：
+    python -m streamlit run streamlit_demo.py
+"""
+
+import random
+import time
+import streamlit as st
+
+CLASSES = {
+    "1": {
+        "key": "warrior", "name": "戰士", "icon": "⚔️",
+        "desc": "血厚攻高，正面硬剛。",
+        "hp": 60, "mp": 10, "atk": 11, "def": 6,
+        "skill_name": "裂地斬", "skill_mp": 6, "skill_mult": 1.9,
+        "skill_desc": "造成 190% 傷害",
+        "starting_weapon": "sword",
+    },
+    "2": {
+        "key": "mage", "name": "法師", "icon": "🔮",
+        "desc": "脆皮高輸出，仰賴魔力。",
+        "hp": 38, "mp": 32, "atk": 6, "def": 2,
+        "skill_name": "烈焰爆破", "skill_mp": 10, "skill_mult": 2.6,
+        "skill_desc": "造成 260% 傷害",
+        "starting_weapon": "staff",
+    },
+    "3": {
+        "key": "rogue", "name": "盜賊", "icon": "🗡️",
+        "desc": "靈巧敏捷，擅長連擊。",
+        "hp": 46, "mp": 18, "atk": 9, "def": 4,
+        "skill_name": "影襲連刺", "skill_mp": 8, "skill_mult": 2.2,
+        "skill_desc": "造成 220% 傷害，必定命中",
+        "starting_weapon": "dagger",
+    },
+}
+
+WEAPONS = {
+    "sword": {"key": "sword", "name": "鐵劍", "icon": "🗡️", "required_class": "warrior", "atk_bonus": 2, "def_bonus": 1, "desc": "戰士的基礎兵器。"},
+    "staff": {"key": "staff", "name": "學徒法杖", "icon": "🪄", "required_class": "mage", "atk_bonus": 2, "def_bonus": 0, "desc": "法師的啟蒙法器。"},
+    "dagger": {"key": "dagger", "name": "短匕首", "icon": "🗡️", "required_class": "rogue", "atk_bonus": 1, "def_bonus": 1, "desc": "盜賊的靈巧短刃。"},
+}
+
+ACCESSORIES = {
+    "crystal_ball": {"key": "crystal_ball", "name": "水晶球", "icon": "🔮", "required_class": "mage", "mp_bonus": 10, "atk_bonus": 0, "def_bonus": 0, "desc": "法師的神秘道具，讓魔力更為集中。"},
+    "cloak": {"key": "cloak", "name": "披風", "icon": "🧥", "required_class": "rogue", "atk_bonus": 1, "def_bonus": 1, "desc": "盜賊的隱匿披風，讓行動更靈巧。"},
+    "shield": {"key": "shield", "name": "盾", "icon": "🛡️", "required_class": "warrior", "atk_bonus": 0, "def_bonus": 2, "desc": "戰士的堅固護盾，能更好地承受打擊。"},
+}
+
+RINGS = {
+    "ring_of_fortitude": {"key": "ring_of_fortitude", "name": "勇士之戒", "icon": "💍", "required_class": "warrior", "atk_bonus": 0, "def_bonus": 2, "desc": "強化守備，讓戰士更能扛住攻擊。"},
+    "ring_of_arcana": {"key": "ring_of_arcana", "name": "秘法之戒", "icon": "💍", "required_class": "mage", "atk_bonus": 1, "def_bonus": 1, "desc": "提升魔力與法術精通。"},
+    "ring_of_shadow": {"key": "ring_of_shadow", "name": "影舞之戒", "icon": "💍", "required_class": "rogue", "atk_bonus": 2, "def_bonus": 0, "desc": "加強靈巧與突襲能力。"},
+}
+
+ENEMY_POOL = [
+    {"name": "地穴鼠", "icon": "🐀", "hp": 18, "atk": 5, "def": 1, "gold": (4, 8), "xp": 8},
+    {"name": "骸骨兵", "icon": "💀", "hp": 26, "atk": 7, "def": 3, "gold": (6, 12), "xp": 12},
+    {"name": "毒沼蛞蝓", "icon": "🐌", "hp": 22, "atk": 6, "def": 2, "gold": (5, 10), "xp": 10},
+    {"name": "暗影狼", "icon": "🐺", "hp": 30, "atk": 9, "def": 2, "gold": (8, 14), "xp": 15},
+    {"name": "鏽甲石像", "icon": "🗿", "hp": 40, "atk": 8, "def": 7, "gold": (10, 18), "xp": 20},
+    {"name": "墓穴法師", "icon": "🧙", "hp": 28, "atk": 11, "def": 1, "gold": (10, 16), "xp": 18},
+]
+
+BOSS = {
+    "name": "深淵王 · 莫拉葛斯", "icon": "👹",
+    "hp": 90, "atk": 13, "def": 5, "gold": (60, 90), "xp": 80,
+}
+
+SHOP_ITEMS = {
+    "1": {"key": "potion", "name": "治療藥水", "desc": "恢復 30 點 HP", "price": 12, "icon": "🧪", "kind": "consumable"},
+    "2": {"key": "ether", "name": "魔力藥水", "desc": "恢復 20 點 MP", "price": 12, "icon": "💠", "kind": "consumable"},
+    "3": {"key": "elixir", "name": "萬能藥", "desc": "完全恢復 HP / MP", "price": 35, "icon": "✨", "kind": "consumable"},
+    "4": {"key": "crystal_ball", "name": "水晶球", "desc": "法師專用的神秘道具", "price": 24, "icon": "🔮", "kind": "equipment", "required_class": "mage"},
+    "5": {"key": "cloak", "name": "披風", "desc": "盜賊專用的隱匿披風", "price": 22, "icon": "🧥", "kind": "equipment", "required_class": "rogue"},
+    "6": {"key": "shield", "name": "盾", "desc": "戰士專用的堅固護盾", "price": 26, "icon": "🛡️", "kind": "equipment", "required_class": "warrior", "slot": "accessory"},
+    "7": {"key": "ring_of_fortitude", "name": "勇士之戒", "desc": "強化守備，讓戰士更能扛住攻擊。", "price": 28, "icon": "💍", "kind": "equipment", "required_class": "warrior", "slot": "ring"},
+    "8": {"key": "ring_of_arcana", "name": "秘法之戒", "desc": "提升魔力與法術精通。", "price": 28, "icon": "💍", "kind": "equipment", "required_class": "mage", "slot": "ring"},
+    "9": {"key": "ring_of_shadow", "name": "影舞之戒", "desc": "加強靈巧與突襲能力。", "price": 28, "icon": "💍", "kind": "equipment", "required_class": "rogue", "slot": "ring"},
+}
+
+TOTAL_FLOORS = 6
+
+SECOND_CHAPTER_ENEMIES = [
+    {"name": "迷霧狂獸", "icon": "🐗", "hp": 28, "atk": 8, "def": 2, "gold": (10, 14), "xp": 14},
+    {"name": "記憶妖精", "icon": "🧚", "hp": 24, "atk": 6, "def": 2, "gold": (10, 16), "xp": 14},
+    {"name": "霧影弓手", "icon": "🏹", "hp": 34, "atk": 10, "def": 4, "gold": (12, 18), "xp": 18},
+    {"name": "沉睡巨岩", "icon": "🪨", "hp": 46, "atk": 9, "def": 8, "gold": (14, 20), "xp": 22},
+    {"name": "幽魂術士", "icon": "👻", "hp": 32, "atk": 12, "def": 3, "gold": (16, 22), "xp": 24},
+    {"name": "破曉獵人", "icon": "🦅", "hp": 38, "atk": 11, "def": 5, "gold": (18, 24), "xp": 26},
+]
+
+SECOND_CHAPTER_BOSS = {
+    "name": "迷霧領主 · 塞勒斯", "icon": "🌫️",
+    "hp": 120, "atk": 15, "def": 6, "gold": (80, 110), "xp": 120,
+}
+
+THIRD_CHAPTER_ENEMIES = [
+    {"name": "幽冥魍魎", "icon": "👹", "hp": 36, "atk": 12, "def": 3, "gold": (16, 24), "xp": 20},
+    {"name": "獄焰守衛", "icon": "🔥", "hp": 42, "atk": 14, "def": 5, "gold": (18, 26), "xp": 24},
+    {"name": "黑暗刺客", "icon": "🗡️", "hp": 38, "atk": 15, "def": 4, "gold": (18, 28), "xp": 26},
+    {"name": "破碎巨像", "icon": "🪨", "hp": 52, "atk": 13, "def": 8, "gold": (22, 30), "xp": 30},
+    {"name": "深淵魔鱗", "icon": "🐉", "hp": 48, "atk": 16, "def": 6, "gold": (24, 34), "xp": 32},
+    {"name": "幻影術師", "icon": "🧙‍♂️", "hp": 44, "atk": 18, "def": 4, "gold": (26, 36), "xp": 34},
+]
+
+THIRD_CHAPTER_BOSS = {
+    "name": "幽冥領主 · 阿斯拉", "icon": "👑",
+    "hp": 150, "atk": 18, "def": 8, "gold": (100, 140), "xp": 160,
+}
+
+CHAPTER_TITLES = {
+    1: "第一章：幽闇地城",
+    2: "第二章：深淵之外",
+    3: "第三章：幽冥之巔",
+}
+
+
+def clamp(v, lo, hi):
+    return max(lo, min(hi, v))
+
+
+class Hero:
+    def __init__(self, cls_data):
+        self.class_key = cls_data["key"]
+        self.class_name = cls_data["name"]
+        self.name = cls_data["name"]
+        self.icon = cls_data["icon"]
+        self.level = 1
+        self.xp = 0
+        self.xp_next = self._xp_to_next()
+        self.hp_max = cls_data["hp"]
+        self.hp = self.hp_max
+        self.mp_max = cls_data["mp"]
+        self.mp = self.mp_max
+        self.base_atk = cls_data["atk"]
+        self.base_defense = cls_data["def"]
+        self.atk = self.base_atk
+        self.defense = self.base_defense
+        self.skill_name = cls_data["skill_name"]
+        self.skill_mp = cls_data["skill_mp"]
+        self.skill_mult = cls_data["skill_mult"]
+        self.gold = 20
+        self.inventory = {"potion": 1, "ether": 1, "elixir": 0}
+        self.equipment = {"weapon": None, "accessory": None, "rings": []}
+        self.equip_weapon(cls_data.get("starting_weapon"))
+
+    def _xp_to_next(self):
+        return 20 + (self.level - 1) * 18
+
+    def is_alive(self):
+        return self.hp > 0
+
+    def status_bar(self):
+        weapon = self.equipment.get("weapon")
+        accessory = self.equipment.get("accessory")
+        rings = self.equipment.get("rings", [])
+        weapon_text = f"{weapon['icon']} {weapon['name']}" if weapon else "未裝備"
+        accessory_text = f"{accessory['icon']} {accessory['name']}" if accessory else "未裝備"
+        ring_text = ", ".join(f"{ring['icon']} {ring['name']}" for ring in rings) if rings else "未裝備"
+        return (f"{self.icon} {self.name}  Lv.{self.level}   HP {self.hp}/{self.hp_max}   "
+                f"MP {self.mp}/{self.mp_max}   💰{self.gold}   "
+                f"裝備:武器[{weapon_text}] 配件[{accessory_text}] 戒指[{ring_text}]")
+
+    def equip_weapon(self, weapon_key):
+        if not weapon_key:
+            return False
+        weapon = WEAPONS.get(weapon_key)
+        if not weapon or weapon.get("required_class") != self.class_key:
+            return False
+        previous = self.equipment.get("weapon")
+        if previous:
+            self.atk -= previous.get("atk_bonus", 0)
+            self.defense -= previous.get("def_bonus", 0)
+        self.equipment["weapon"] = weapon
+        self.atk += weapon.get("atk_bonus", 0)
+        self.defense += weapon.get("def_bonus", 0)
+        return True
+
+    def equip_equipment(self, equipment_key):
+        if not equipment_key:
+            return False
+        equipment = ACCESSORIES.get(equipment_key)
+        if not equipment or equipment.get("required_class") != self.class_key:
+            return False
+        previous = self.equipment.get("accessory")
+        if previous and previous.get("key") == equipment_key:
+            return True
+        if previous:
+            self.atk -= previous.get("atk_bonus", 0)
+            self.defense -= previous.get("def_bonus", 0)
+            self.mp_max -= previous.get("mp_bonus", 0)
+            self.mp = min(self.mp, self.mp_max)
+        self.equipment["accessory"] = equipment
+        self.atk += equipment.get("atk_bonus", 0)
+        self.defense += equipment.get("def_bonus", 0)
+        self.mp_max += equipment.get("mp_bonus", 0)
+        self.mp = min(self.mp, self.mp_max)
+        return True
+
+    def equip_ring(self, ring_key):
+        if not ring_key:
+            return False
+        ring = RINGS.get(ring_key)
+        if not ring or ring.get("required_class") != self.class_key:
+            return False
+        self.equipment["rings"].append(ring)
+        self.atk += ring.get("atk_bonus", 0)
+        self.defense += ring.get("def_bonus", 0)
+        return True
+
+    def gain_rewards(self, gold, xp):
+        self.gold += gold
+        self.xp += xp
+        leveled = False
+        while self.xp >= self.xp_next:
+            self.xp -= self.xp_next
+            self.level += 1
+            self.hp_max += 8
+            self.mp_max += 4
+            self.atk += 2
+            self.defense += 1
+            self.hp = self.hp_max
+            self.mp = self.mp_max
+            self.xp_next = self._xp_to_next()
+            leveled = True
+        return leveled
+
+    def use_item(self, key):
+        if self.inventory.get(key, 0) <= 0:
+            return False, "道具數量不足。"
+        self.inventory[key] -= 1
+        if key == "potion":
+            self.hp = clamp(self.hp + 30, 0, self.hp_max)
+            return True, "你喝下治療藥水，恢復了 30 點 HP。"
+        if key == "ether":
+            self.mp = clamp(self.mp + 20, 0, self.mp_max)
+            return True, "你喝下魔力藥水，恢復了 20 點 MP。"
+        self.hp, self.mp = self.hp_max, self.mp_max
+        return True, "萬能藥的光輝籠罩全身，HP / MP 完全恢復！"
+
+    def maybe_gain_weapon(self):
+        if random.random() >= 0.2:
+            return None
+        weapon_key = next((key for key, weapon in WEAPONS.items() if weapon["required_class"] == self.class_key), None)
+        if not weapon_key:
+            return None
+        if self.equipment.get("weapon") and self.equipment["weapon"]["key"] == weapon_key:
+            return None
+        self.equip_weapon(weapon_key)
+        weapon = WEAPONS[weapon_key]
+        return f"戰利品中出現了 {weapon['icon']} {weapon['name']}，你將它裝備上了。"
+
+
+class Enemy:
+    def __init__(self, data, floor=0, is_boss=False):
+        mult = 1 + floor * 0.22 if not is_boss else 1
+        self.name = data["name"]
+        self.icon = data["icon"]
+        self.hp_max = round(data["hp"] * mult)
+        self.hp = self.hp_max
+        self.atk = round(data["atk"] * mult)
+        self.defense = data["def"] + (floor // 2 if not is_boss else 0)
+        self.gold_range = (round(data["gold"][0] * mult), round(data["gold"][1] * mult))
+        self.xp = round(data["xp"] * mult)
+        self.is_boss = is_boss
+
+    def is_alive(self):
+        return self.hp > 0
+
+
+def init_game_state():
+    return {
+        "phase": "start",
+        "hero": None,
+        "enemy": None,
+        "chapter": 1,
+        "floor": 0,
+        "messages": [],
+    }
+
+
+def current_chapter_title(game):
+    chapter = game.get("chapter", 1)
+    return CHAPTER_TITLES.get(chapter, "未知章節")
+
+
+def current_enemy_pool(game):
+    chapter = game.get("chapter", 1)
+    if chapter == 1:
+        return ENEMY_POOL
+    if chapter == 2:
+        return SECOND_CHAPTER_ENEMIES
+    return THIRD_CHAPTER_ENEMIES
+
+
+def current_boss_data(game):
+    chapter = game.get("chapter", 1)
+    if chapter == 1:
+        return BOSS
+    if chapter == 2:
+        return SECOND_CHAPTER_BOSS
+    return THIRD_CHAPTER_BOSS
+
+
+def ensure_game_state():
+    if "game" not in st.session_state:
+        st.session_state.game = init_game_state()
+
+
+def save_game(game=None):
+    if game is None:
+        game = st.session_state.get("game")
+    if game is not None:
+        st.session_state.game = game
+    return game
+
+
+def log(message, game=None):
+    if game is None:
+        game = st.session_state.get("game")
+    if game is None:
+        return
+    game["messages"].append(message)
+    save_game(game)
+
+
+def create_hero(class_key, player_name):
+    hero = Hero(CLASSES[class_key])
+    hero.name = player_name or hero.name
+    return hero
+
+
+def start_new_game():
+    game = st.session_state.game
+    player_name = st.session_state.get("player_name", "冒險者").strip() or "冒險者"
+    game.update({
+        "phase": "explore",
+        "hero": create_hero(st.session_state.get("selected_class", "1"), player_name),
+        "enemy": None,
+        "chapter": 1,
+        "floor": 0,
+        "messages": [f"{player_name} 推開地城厚重的石門，冷風夾雜著霉味撲面而來。"],
+    })
+    save_game(game)
+
+
+def start_boss_fight(game=None):
+    if game is None:
+        game = st.session_state.game
+    boss_data = current_boss_data(game)
+    game["enemy"] = Enemy(boss_data, floor=game["floor"], is_boss=True)
+    game["phase"] = "battle"
+    save_game(game)
+    if game.get("chapter", 1) == 1:
+        log("👑 深淵王甦醒，注視著你……")
+    else:
+        log("🌫️ 霧中巨影現身，迷霧領主向你發出冷笑……")
+
+
+def advance_floor(game=None):
+    if game is None:
+        game = st.session_state.game
+    game["floor"] += 1
+    if game["floor"] >= TOTAL_FLOORS - 1:
+        start_boss_fight(game)
+        return
+    game["phase"] = "explore"
+    save_game(game)
+    log(f"你來到第 {game['floor'] + 1} 層。")
+
+
+def start_chapter_two(game=None):
+    if game is None:
+        game = st.session_state.game
+    game["chapter"] = 2
+    game["floor"] = 0
+    game["phase"] = "explore"
+    game["enemy"] = None
+    log("第二章開啟：迷霧之外的荒野，未知的試煉正等待著你。", game=game)
+    save_game(game)
+
+
+def start_chapter_three(game=None):
+    if game is None:
+        game = st.session_state.game
+    game["chapter"] = 3
+    game["floor"] = 0
+    game["phase"] = "explore"
+    game["enemy"] = None
+    log("第三章來臨：幽冥之巔層層考驗，勇者踏上最終挑戰。", game=game)
+    save_game(game)
+
+
+def handle_explore(action):
+    game = st.session_state.game
+    hero = game["hero"]
+    if action == "continue":
+        if game["floor"] == TOTAL_FLOORS - 1:
+            start_boss_fight(game)
+            return
+        roll = random.random()
+        if roll < 0.65:
+            pool = current_enemy_pool(game)
+            base = random.choice(pool[: min(len(pool), game["floor"] + 2)])
+            game["enemy"] = Enemy(base, floor=game["floor"])
+            game["phase"] = "battle"
+            log(f"{game['enemy'].icon} {game['enemy'].name} 擋住了去路！")
+        elif roll < 0.85:
+            gold = random.randint(8, 20) + game["floor"] * 3
+            hero.gold += gold
+            log(f"你發現寶箱，獲得 💰{gold} 金幣。")
+            advance_floor(game)
+            return
+        else:
+            heal = round(hero.hp_max * 0.4)
+            hero.hp = clamp(hero.hp + heal, 0, hero.hp_max)
+            log(f"一處清泉出現在眼前，你恢復了 {heal} 點 HP。")
+            advance_floor(game)
+            return
+    elif action == "shop":
+        game["phase"] = "shop"
+        log("流浪商人出現在陰影裡，向你揮了揮手。")
+    elif action == "rest":
+        if hero.gold < 10:
+            log("身上金幣不足，商人搖了搖頭，將你請出帳篷。")
+        else:
+            hero.gold -= 10
+            hero.hp, hero.mp = hero.hp_max, hero.mp_max
+            log("你在篝火旁躺下，傷口與魔力都恢復了。")
+    elif action == "inventory":
+        game["phase"] = "inventory"
+        log("你檢視了自己的背包。")
+    save_game(game)
+
+
+def resolve_battle_action(game, action, item_key=None):
+    hero = game["hero"]
+    enemy = game["enemy"]
+    if not hero or not enemy:
+        return game
+
+    if action == "attack":
+        damage = max(1, hero.atk + random.randint(-2, 3) - enemy.defense)
+        enemy.hp = clamp(enemy.hp - damage, 0, enemy.hp_max)
+        log(f"你揮出攻擊，對 {enemy.name} 造成 {damage} 點傷害。", game=game)
+    elif action == "skill":
+        if hero.mp < hero.skill_mp:
+            log("魔力不足，無法施展技能。", game=game)
+            save_game(game)
+            return game
+        hero.mp -= hero.skill_mp
+        damage = max(1, round(hero.atk * hero.skill_mult) + random.randint(-1, 4) - round(enemy.defense * 0.6))
+        enemy.hp = clamp(enemy.hp - damage, 0, enemy.hp_max)
+        log(f"你施展【{hero.skill_name}】！造成 {damage} 點傷害。", game=game)
+    elif action == "item" and item_key:
+        used, message = hero.use_item(item_key)
+        log(message, game=game)
+        if not used:
+            save_game(game)
+            return game
+    elif action == "run":
+        if random.random() < 0.55:
+            log("你成功逃離了戰鬥。", game=game)
+            game["phase"] = "explore"
+            game["enemy"] = None
+            save_game(game)
+            return game
+        log("逃跑失敗！", game=game)
+
+    if enemy.is_alive() and action != "run":
+        damage = max(1, enemy.atk + random.randint(-2, 3) - hero.defense)
+        hero.hp = clamp(hero.hp - damage, 0, hero.hp_max)
+        log(f"{enemy.name} 反擊，你受到 {damage} 點傷害。", game=game)
+
+    if not enemy.is_alive():
+        gold = random.randint(*enemy.gold_range)
+        hero.gain_rewards(gold, enemy.xp)
+        log(f"你擊敗了 {enemy.name}，獲得 💰{gold} 金幣與 {enemy.xp} 經驗值。", game=game)
+        if not enemy.is_boss:
+            weapon_message = hero.maybe_gain_weapon()
+            if weapon_message:
+                log(weapon_message, game=game)
+        game["enemy"] = None
+        if enemy.is_boss:
+            chapter = game.get("chapter", 1)
+            if chapter < 3:
+                game["phase"] = "chapter_complete"
+                if chapter == 1:
+                    log("第一章完成！幽闇的詛咒被解開，但命運的迷霧仍在前方。", game=game)
+                else:
+                    log("第二章完成！迷霧中的威脅一度平息，但幽冥之巔仍然等待著你。", game=game)
+            else:
+                game["phase"] = "victory"
+                log("幽冥領主轟然倒地，深淵之巔終於重現光明。", game=game)
+        else:
+            game["phase"] = "explore"
+            advance_floor(game)
+            return game
+        save_game(game)
+        return game
+
+    if not hero.is_alive():
+        game["phase"] = "gameover"
+        log("你倒下了……", game=game)
+    save_game(game)
+    return game
+
+
+def handle_battle(action, item_key=None):
+    game = st.session_state.game
+    resolve_battle_action(game, action, item_key)
+    if hasattr(st, "rerun"):
+        st.rerun()
+
+
+def should_process_purchase(item_key, session_state=None, now=None):
+    if session_state is None:
+        session_state = st.session_state
+    if now is None:
+        now = time.monotonic()
+
+    last_time = session_state.get("_purchase_last_time", 0.0)
+    last_key = session_state.get("_purchase_last_key")
+    if last_key == item_key and now - last_time < 0.8:
+        return False
+
+    session_state["_purchase_last_time"] = now
+    session_state["_purchase_last_key"] = item_key
+    return True
+
+
+def buy_item(item_key):
+    if not should_process_purchase(item_key):
+        log("請稍等一下再點擊一次。")
+        return
+
+    game = st.session_state.game
+    hero = game["hero"]
+    item = SHOP_ITEMS[item_key]
+    if hero.gold < item["price"]:
+        log("金幣不足，無法購買。")
+        return
+    if item.get("kind") == "equipment":
+        if item.get("required_class") != hero.class_key:
+            log("這件裝備不適合你目前的職業。")
+            return
+        if item.get("slot") == "ring":
+            if not hero.equip_ring(item["key"]):
+                log("這件裝備不適合你目前的職業。")
+                return
+        else:
+            already_owned = bool(
+                hero.equipment.get("accessory")
+                and hero.equipment["accessory"]["key"] == item["key"]
+            )
+            if already_owned:
+                log("你已經擁有這個配件，無法重複購買。")
+                return
+            if not hero.equip_equipment(item["key"]):
+                log("這件裝備不適合你目前的職業。")
+                return
+        hero.gold -= item["price"]
+        log(f"你購買並裝備了 {item['icon']} {item['name']}。")
+        save_game(game)
+        return
+    hero.gold -= item["price"]
+    hero.inventory[item["key"]] += 1
+    log(f"你購買了 {item['icon']} {item['name']}。")
+    save_game(game)
+
+
+def render_sidebar():
+    st.sidebar.title("🎮 遊戲設定")
+    st.sidebar.caption("選擇職業後，點擊開始新冒險。")
+    st.session_state.selected_class = st.sidebar.selectbox(
+        "職業",
+        options=list(CLASSES.keys()),
+        format_func=lambda key: f"{CLASSES[key]['icon']} {CLASSES[key]['name']}",
+    )
+    st.session_state.player_name = st.sidebar.text_input("角色名稱", value=st.session_state.get("player_name", "冒險者"))
+    if st.sidebar.button("開始新冒險", use_container_width=True):
+        start_new_game()
+    if st.sidebar.button("重新整理介面", use_container_width=True):
+        st.rerun()
+
+    game = st.session_state.get("game")
+    hero = game["hero"] if game else None
+    if hero:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("裝備")
+        weapon = hero.equipment.get("weapon")
+        accessory = hero.equipment.get("accessory")
+        rings = hero.equipment.get("rings", [])
+        if weapon:
+            st.sidebar.caption(f"武器：{weapon['icon']} {weapon['name']}")
+        else:
+            st.sidebar.caption("武器：尚未裝備")
+        if accessory:
+            bonus_text = []
+            if accessory.get("mp_bonus", 0):
+                bonus_text.append(f"+{accessory['mp_bonus']} MP")
+            if accessory.get("atk_bonus", 0):
+                bonus_text.append(f"+{accessory['atk_bonus']} ATK")
+            if accessory.get("def_bonus", 0):
+                bonus_text.append(f"+{accessory['def_bonus']} DEF")
+            st.sidebar.caption(f"配件：{accessory['icon']} {accessory['name']} {' '.join(bonus_text)}")
+        else:
+            st.sidebar.caption("配件：尚未裝備")
+        if rings:
+            st.sidebar.caption("戒指：" + ", ".join(f"{ring['icon']} {ring['name']}" for ring in rings))
+        else:
+            st.sidebar.caption("戒指：尚未裝備")
+
+        weapon_bonus = weapon["atk_bonus"] if weapon else 0
+        accessory_bonus = accessory["atk_bonus"] if accessory else 0
+        ring_atk_bonus = sum(ring["atk_bonus"] for ring in rings)
+        weapon_def_bonus = weapon["def_bonus"] if weapon else 0
+        accessory_def_bonus = accessory["def_bonus"] if accessory else 0
+        ring_def_bonus = sum(ring["def_bonus"] for ring in rings)
+
+        st.sidebar.markdown(f"**攻擊力**：原始 {hero.base_atk} + 武器 {weapon_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus} = {hero.atk}")
+        st.sidebar.markdown(f"**防禦力**：原始 {hero.base_defense} + 武器 {weapon_def_bonus} + 配件 {accessory_def_bonus} + 戒指 {ring_def_bonus} = {hero.defense}")
+
+
+def render_header():
+    st.set_page_config(page_title="幽闇地城", page_icon="🗡️", layout="wide")
+    st.title("🕯️ 幽闇地城 · Streamlit RPG")
+    st.caption("選擇職業、探索地城，迎向第二章的迷霧試煉。")
+
+
+def render_status(game):
+    hero = game["hero"]
+    if not hero:
+        st.info("尚未開始冒險。請在左側選擇職業後開始。")
+        return
+
+    chapter_label = current_chapter_title(game)
+    st.subheader(f"{chapter_label} - 角色狀態")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("角色", f"{hero.icon} {hero.name}")
+    col2.metric("職業", hero.class_name)
+    col3.metric("等級", f"Lv.{hero.level}")
+    col4.metric("金幣", f"💰{hero.gold}")
+
+    weapon = hero.equipment.get("weapon")
+    accessory = hero.equipment.get("accessory")
+    rings = hero.equipment.get("rings", [])
+
+    weapon_bonus = weapon["atk_bonus"] if weapon else 0
+    accessory_bonus = accessory["atk_bonus"] if accessory else 0
+    ring_atk_bonus = sum(ring["atk_bonus"] for ring in rings)
+    weapon_def_bonus = weapon["def_bonus"] if weapon else 0
+    accessory_def_bonus = accessory["def_bonus"] if accessory else 0
+    ring_def_bonus = sum(ring["def_bonus"] for ring in rings)
+
+    col1, col2 = st.columns(2)
+    col1.progress(min(hero.hp / hero.hp_max, 1.0), text=f"HP：{hero.hp}/{hero.hp_max}")
+    col2.progress(min(hero.mp / hero.mp_max, 1.0), text=f"MP：{hero.mp}/{hero.mp_max}")
+
+
+def render_explore_screen(game):
+    hero = game["hero"]
+    chapter_label = current_chapter_title(game)
+    st.subheader(f"{chapter_label} · 第 {game['floor'] + 1} 層")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("繼續探索", use_container_width=True):
+            handle_explore("continue")
+    with col2:
+        if st.button("造訪商人", use_container_width=True):
+            handle_explore("shop")
+    col3, col4 = st.columns(2)
+    with col3:
+        if st.button("就地歇息（💰10）", use_container_width=True):
+            handle_explore("rest")
+    with col4:
+        if st.button("查看背包", use_container_width=True):
+            handle_explore("inventory")
+
+    st.write("背包：")
+    for item_id, item in SHOP_ITEMS.items():
+        if item.get("kind") != "consumable":
+            continue
+        count = hero.inventory.get(item["key"], 0)
+        st.write(f"- {item['icon']} {item['name']} × {count}")
+
+
+def render_battle_screen(game):
+    hero = game["hero"]
+    enemy = game["enemy"]
+    if not hero or not enemy:
+        return
+
+    st.markdown("**⚔️ 戰鬥中**")
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.markdown("<div style='font-size:0.88rem; line-height:1.35; padding-right: 0.5rem;'>"
+                    f"<strong>你</strong><br>"
+                    f"角色：{hero.icon} {hero.name}<br>"
+                    f"職業：{hero.class_name}<br>"
+                    f"HP：{hero.hp}/{hero.hp_max}<br>"
+                    f"MP：{hero.mp}/{hero.mp_max}<br>"
+                    f"攻擊 / 防禦：{hero.atk} / {hero.defense}<br>"
+                    f"</div>", unsafe_allow_html=True)
+        st.progress(min(hero.hp / hero.hp_max, 1.0), text=f"你的 HP：{hero.hp}/{hero.hp_max}")
+        st.progress(min(hero.mp / hero.mp_max, 1.0), text=f"你的 MP：{hero.mp}/{hero.mp_max}")
+    with col_right:
+        st.markdown("<div style='font-size:0.88rem; line-height:1.35; padding-left: 0.5rem;'>"
+                    f"<strong>敵人</strong><br>"
+                    f"敵人：{enemy.icon} {enemy.name}<br>"
+                    f"HP：{enemy.hp}/{enemy.hp_max}<br>"
+                    f"攻擊 / 防禦：{enemy.atk} / {enemy.defense}<br>"
+                    f"</div>", unsafe_allow_html=True)
+        st.progress(min(enemy.hp / enemy.hp_max, 1.0), text=f"敵人 HP：{enemy.hp}/{enemy.hp_max}")
+
+    st.markdown("<div style='font-size:0.92rem; line-height:1.4;'>選擇你的行動：</div>", unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        if st.button("⚔️ 攻擊", use_container_width=True):
+            handle_battle("attack")
+    with col2:
+        if st.button("✨ 技能", use_container_width=True):
+            handle_battle("skill")
+    with col3:
+        if st.button("🏃 逃跑", use_container_width=True):
+            handle_battle("run")
+    with col4:
+        if st.button("🎒 背包", use_container_width=True):
+            pass
+
+    for item_id, item in SHOP_ITEMS.items():
+        if item.get("kind") != "consumable":
+            continue
+        count = hero.inventory.get(item["key"], 0)
+        if count > 0 and st.button(f"使用 {item['icon']} {item['name']} × {count}", key=f"use_{item['key']}"):
+            handle_battle("item", item["key"])
+
+
+def render_shop_screen(game):
+    hero = game["hero"]
+    if not hero:
+        return
+    st.subheader("🛒 商店")
+    st.write(f"你的金幣：💰{hero.gold}")
+    for item_id, item in SHOP_ITEMS.items():
+        if item.get("kind") == "equipment" and item.get("required_class") != hero.class_key:
+            continue
+        affordable = hero.gold >= item["price"]
+        already_owned_accessory = bool(
+            item.get("slot") == "accessory"
+            and hero.equipment.get("accessory")
+            and hero.equipment["accessory"]["key"] == item["key"]
+        )
+        label = f"購買 {item['icon']} {item['name']}（💰{item['price']}）"
+        if already_owned_accessory:
+            label = f"已擁有 {item['icon']} {item['name']}"
+        if st.button(label, key=f"buy_{item['key']}", disabled=(not affordable or already_owned_accessory)):
+            buy_item(item_id)
+    if st.button("離開商店"):
+        game["phase"] = "explore"
+        save_game(game)
+
+
+def render_inventory_screen(game):
+    hero = game["hero"]
+    if not hero:
+        return
+    st.subheader("🎒 背包")
+    for item_id, item in SHOP_ITEMS.items():
+        if item.get("kind") != "consumable":
+            continue
+        count = hero.inventory.get(item["key"], 0)
+        st.write(f"- {item['icon']} {item['name']} × {count} — {item['desc']}")
+    if st.button("返回探索"):
+        game["phase"] = "explore"
+        save_game(game)
+
+
+def render_chapter_complete(game):
+    hero = game["hero"]
+    chapter = game.get("chapter", 1)
+    if chapter == 1:
+        st.success("第一章完結：幽闇地城已被淨化。")
+        st.write("你獲得了片刻的平靜，但遠方的迷霧仍在呼喚你。")
+        if st.button("進入第二章：深淵之外"):
+            start_chapter_two(game)
+    else:
+        st.success("第二章完結：迷霧已被突破。")
+        st.write("你已走過迷霧深處，幽冥之巔的最終考驗即將展開。")
+        if st.button("進入第三章：幽冥之巔"):
+            start_chapter_three(game)
+    if st.button("返回主選單"):
+        start_new_game()
+
+
+def render_game_over(game):
+    st.error("你倒下了……")
+    if st.button("重新開始"):
+        start_new_game()
+
+
+def render_victory(game):
+    hero = game["hero"]
+    st.success("深淵已淨化")
+    st.markdown(f"你以 Lv.{hero.level} 的 {hero.name} 之姿，走出了地城。")
+    if st.button("再來一局"):
+        start_new_game()
+
+
+def main():
+    ensure_game_state()
+    render_header()
+    render_sidebar()
+
+    game = st.session_state.game
+    if game["phase"] != "battle":
+        render_status(game)
+
+    if game["phase"] == "start":
+        st.info("選擇職業並開始冒險。")
+        return
+
+    if game["phase"] == "explore":
+        render_explore_screen(game)
+    elif game["phase"] == "battle":
+        render_battle_screen(game)
+    elif game["phase"] == "shop":
+        render_shop_screen(game)
+    elif game["phase"] == "inventory":
+        render_inventory_screen(game)
+    elif game["phase"] == "gameover":
+        render_game_over(game)
+    elif game["phase"] == "chapter_complete":
+        render_chapter_complete(game)
+    elif game["phase"] == "victory":
+        render_victory(game)
+
+    st.markdown("---")
+    st.subheader("📝 冒險紀錄")
+    if game["messages"]:
+        for message in reversed(game["messages"][-10:]):
+            st.write(message)
+    else:
+        st.write("尚無冒險紀錄。")
+
+
+if __name__ == "__main__":
+    main()
