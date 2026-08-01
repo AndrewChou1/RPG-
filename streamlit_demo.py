@@ -910,7 +910,7 @@ def render_battle_screen(game):
                     f"MP：{hero.mp}/{hero.mp_max}<br>"
                     f"攻擊 / 防禦：{hero.atk} / {hero.defense}<br>"
                     f"</div>", unsafe_allow_html=True)
-                render_red_hp_bar(hero.hp, hero.hp_max, f"你的 HP：{hero.hp}/{hero.hp_max}")
+        render_red_hp_bar(hero.hp, hero.hp_max, f"你的 HP：{hero.hp}/{hero.hp_max}")
         st.progress(min(hero.mp / hero.mp_max, 1.0), text=f"你的 MP：{hero.mp}/{hero.mp_max}")
     with col_right:
         st.markdown("<div style='font-size:0.88rem; line-height:1.35; padding-left: 0.5rem;'>"
