@@ -84,6 +84,14 @@ SHOP_ITEMS = {
     "9": {"key": "ring_of_shadow", "name": "影舞之戒", "desc": "加強靈巧與突襲能力。", "price": 28, "icon": "💍", "kind": "equipment", "required_class": "rogue", "slot": "ring"},
 }
 
+WEAPON_UPGRADE_MAX_LEVEL = 3
+WEAPON_UPGRADE_ATK_PER_LEVEL = 2
+WEAPON_UPGRADE_COSTS = {
+    1: 20,
+    2: 35,
+    3: 55,
+}
+
 TOTAL_FLOORS = 6
 
 SECOND_CHAPTER_ENEMIES = [
@@ -148,6 +156,7 @@ class Hero:
         self.gold = 20
         self.inventory = {"potion": 1, "ether": 1, "elixir": 0}
         self.equipment = {"weapon": None, "accessory": None, "rings": []}
+        self.weapon_upgrade_level = 0
         self.equip_weapon(cls_data.get("starting_weapon"))
 
     def _xp_to_next(self):
@@ -230,6 +239,35 @@ class Hero:
             self.xp_next = self._xp_to_next()
             leveled = True
         return leveled
+
+    def weapon_upgrade_bonus(self):
+        level = getattr(self, "weapon_upgrade_level", 0)
+        return level * WEAPON_UPGRADE_ATK_PER_LEVEL
+
+    def can_upgrade_weapon(self):
+        return self.equipment.get("weapon") is not None and getattr(self, "weapon_upgrade_level", 0) < WEAPON_UPGRADE_MAX_LEVEL
+
+    def weapon_upgrade_cost(self):
+        next_level = getattr(self, "weapon_upgrade_level", 0) + 1
+        return WEAPON_UPGRADE_COSTS.get(next_level)
+
+    def upgrade_weapon(self):
+        if not self.equipment.get("weapon"):
+            return False, "你尚未裝備武器，無法強化。"
+        current_level = getattr(self, "weapon_upgrade_level", 0)
+        if current_level >= WEAPON_UPGRADE_MAX_LEVEL:
+            return False, "武器已達最高強化等級。"
+        cost = WEAPON_UPGRADE_COSTS.get(current_level + 1)
+        if cost is None:
+            return False, "目前無法強化武器。"
+        if self.gold < cost:
+            return False, "金幣不足，無法強化武器。"
+
+        self.gold -= cost
+        self.weapon_upgrade_level = current_level + 1
+        self.atk += WEAPON_UPGRADE_ATK_PER_LEVEL
+        weapon_name = self.equipment["weapon"]["name"]
+        return True, f"你的 {weapon_name} 強化至 +{self.weapon_upgrade_level}！"
 
     def use_item(self, key):
         if self.inventory.get(key, 0) <= 0:
@@ -607,6 +645,15 @@ def buy_item(item_key):
     save_game(game)
 
 
+def upgrade_weapon_in_shop():
+    game = st.session_state.game
+    hero = game["hero"]
+    upgraded, message = hero.upgrade_weapon()
+    log(message)
+    if upgraded:
+        save_game(game)
+
+
 def render_sidebar():
     st.sidebar.title("🎮 遊戲設定")
     st.sidebar.caption("選擇職業後，點擊開始新冒險。")
@@ -631,7 +678,14 @@ def render_sidebar():
         accessory = hero.equipment.get("accessory")
         rings = hero.equipment.get("rings", [])
         if weapon:
-            st.sidebar.caption(f"武器：{weapon['icon']} {weapon['name']}")
+            weapon_level = getattr(hero, "weapon_upgrade_level", 0)
+            weapon_tag = f"+{clamp(weapon_level, 0, WEAPON_UPGRADE_MAX_LEVEL)}"
+            weapon_upgrade_bonus = hero.weapon_upgrade_bonus()
+            weapon_detail = f"（強化 +{weapon_upgrade_bonus} ATK）"
+            st.sidebar.markdown(
+                f"<span style='color:#000000;'>武器：{weapon['icon']} {weapon['name']} {weapon_tag} {weapon_detail}</span>",
+                unsafe_allow_html=True,
+            )
         else:
             st.sidebar.caption("武器：尚未裝備")
         if accessory:
@@ -678,6 +732,7 @@ def render_sidebar():
             st.sidebar.caption("戒指：尚未裝備")
 
         weapon_bonus = weapon["atk_bonus"] if weapon else 0
+        weapon_upgrade_bonus = hero.weapon_upgrade_bonus() if weapon else 0
         accessory_bonus = accessory["atk_bonus"] if accessory else 0
         normalized_rings = [normalize_ring(ring) for ring in rings]
         ring_atk_bonus = sum(ring["atk_bonus"] for ring in normalized_rings)
@@ -689,7 +744,7 @@ def render_sidebar():
         level_def_bonus = hero.level - 1
 
         st.sidebar.markdown(
-            f"**攻擊力**：原始 {hero.base_atk} + 升級 {level_atk_bonus} + 武器 {weapon_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus}（{ring_count} 枚） = {hero.atk}"
+            f"**攻擊力**：原始 {hero.base_atk} + 升級 {level_atk_bonus} + 武器 {weapon_bonus} + 強化 {weapon_upgrade_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus}（{ring_count} 枚） = {hero.atk}"
         )
         st.sidebar.markdown(
             f"**防禦力**：原始 {hero.base_defense} + 升級 {level_def_bonus} + 武器 {weapon_def_bonus} + 配件 {accessory_def_bonus} + 戒指 {ring_def_bonus}（{ring_count} 枚） = {hero.defense}"
@@ -816,18 +871,44 @@ def render_shop_screen(game):
         return
     st.subheader("🛒 商店")
     st.write(f"你的金幣：💰{hero.gold}")
+
+    weapon = hero.equipment.get("weapon")
+    weapon_level = getattr(hero, "weapon_upgrade_level", 0)
+    if weapon:
+        st.markdown("### 🔨 武器強化")
+        if weapon_level >= WEAPON_UPGRADE_MAX_LEVEL:
+            st.caption(f"{weapon['icon']} {weapon['name']} 已達最高等級 +{weapon_level}")
+        else:
+            next_level = weapon_level + 1
+            cost = WEAPON_UPGRADE_COSTS[next_level]
+            current_tag = f"+{weapon_level}"
+            next_tag = f"+{next_level}"
+            st.markdown(
+                f"<span style='color:#000000;'>{weapon['icon']} {weapon['name']} {current_tag}</span> → {next_tag}"
+                f"（每級 +{WEAPON_UPGRADE_ATK_PER_LEVEL} 攻擊）",
+                unsafe_allow_html=True,
+            )
+            if st.button(
+                f"強化武器到 {next_tag}（💰{cost}）",
+                key="upgrade_weapon",
+                disabled=hero.gold < cost,
+            ):
+                upgrade_weapon_in_shop()
+
+    st.markdown("### 🛍️ 商品")
     for item_id, item in SHOP_ITEMS.items():
         if item.get("kind") == "equipment" and item.get("required_class") != hero.class_key:
             continue
         affordable = hero.gold >= item["price"]
+        is_accessory_item = item.get("kind") == "equipment" and item.get("slot") != "ring"
+        has_any_accessory_equipped = bool(hero.equipment.get("accessory"))
         already_owned_accessory = bool(
-            item.get("slot") == "accessory"
-            and hero.equipment.get("accessory")
-            and hero.equipment["accessory"]["key"] == item["key"]
+            is_accessory_item
+            and has_any_accessory_equipped
         )
         label = f"購買 {item['icon']} {item['name']}（💰{item['price']}）"
         if already_owned_accessory:
-            label = f"已擁有 {item['icon']} {item['name']}"
+            label = f"已裝備配件，無法購買 {item['icon']} {item['name']}"
         if st.button(label, key=f"buy_{item['key']}", disabled=(not affordable or already_owned_accessory)):
             buy_item(item_id)
     if st.button("離開商店"):
