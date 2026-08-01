@@ -533,6 +533,7 @@ def handle_explore(action):
             return
     elif action == "shop":
         game["phase"] = "shop"
+        st.session_state["shop_section"] = "menu"
         log("流浪商人出現在陰影裡，向你揮了揮手。")
         save_game(game)
         if hasattr(st, "rerun"):
@@ -933,51 +934,122 @@ def render_shop_screen(game):
     st.subheader("🛒 商店")
     st.write(f"你的金幣：💰{hero.gold}")
 
-    weapon = hero.equipment.get("weapon")
-    weapon_level = getattr(hero, "weapon_upgrade_level", 0)
-    if weapon:
-        st.markdown("### 🔨 武器強化")
-        if weapon_level >= WEAPON_UPGRADE_MAX_LEVEL:
-            st.caption(f"{weapon['icon']} {weapon['name']} 已達最高等級 +{weapon_level}")
-        else:
-            next_level = weapon_level + 1
-            cost = WEAPON_UPGRADE_COSTS[next_level]
-            current_tag = f"+{weapon_level}"
-            next_tag = f"+{next_level}"
-            st.markdown(
-                f"<span style='color:#000000;'>{weapon['icon']} {weapon['name']} {current_tag}</span> → {next_tag}"
-                f"（每級 +{WEAPON_UPGRADE_ATK_PER_LEVEL} 攻擊）",
-                unsafe_allow_html=True,
-            )
-            if st.button(
-                f"強化武器到 {next_tag}（💰{cost}）",
-                key="upgrade_weapon",
-                disabled=(hero.gold < cost),
-            ):
-                upgrade_weapon_in_shop()
+    section = st.session_state.get("shop_section", "menu")
 
-    st.markdown("### 🛍️ 商品")
-    for item_id, item in SHOP_ITEMS.items():
-        if item.get("kind") == "equipment" and item.get("required_class") != hero.class_key:
-            continue
-        affordable = hero.gold >= item["price"]
-        is_accessory_item = item.get("kind") == "equipment" and item.get("slot") != "ring"
-        has_any_accessory_equipped = bool(hero.equipment.get("accessory"))
-        already_owned_accessory = bool(
-            is_accessory_item
-            and has_any_accessory_equipped
-        )
-        label = f"購買 {item['icon']} {item['name']}（💰{item['price']}）"
-        if already_owned_accessory:
-            label = f"已裝備配件，無法購買 {item['icon']} {item['name']}"
-        if st.button(
-            label,
-            key=f"buy_{item['key']}",
-            disabled=(not affordable or already_owned_accessory),
-        ):
-            buy_item(item_id)
+    if section == "menu":
+        st.markdown("### 選擇購買類別")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🧪 藥水補給", key="shop_enter_consumables", use_container_width=True):
+                st.session_state["shop_section"] = "consumables"
+                if hasattr(st, "rerun"):
+                    st.rerun()
+        with col2:
+            if st.button("🛡️ 裝備鍛造", key="shop_enter_equipment", use_container_width=True):
+                st.session_state["shop_section"] = "equipment"
+                if hasattr(st, "rerun"):
+                    st.rerun()
+
+    elif section == "consumables":
+        st.markdown("### 🧪 藥水補給")
+        consumables = [
+            (item_id, item)
+            for item_id, item in SHOP_ITEMS.items()
+            if item.get("kind") == "consumable"
+        ]
+
+        cols_per_row = 3
+        for start in range(0, len(consumables), cols_per_row):
+            row_items = consumables[start:start + cols_per_row]
+            cols = st.columns(cols_per_row)
+            for col_index, (item_id, item) in enumerate(row_items):
+                affordable = hero.gold >= item["price"]
+                with cols[col_index]:
+                    st.markdown(f"**{item['icon']} {item['name']}**")
+                    st.caption(item["desc"])
+                    if st.button(
+                        f"購買 {item['icon']} {item['name']}（💰{item['price']}）",
+                        key=f"buy_{item['key']}",
+                        disabled=(not affordable),
+                        use_container_width=True,
+                    ):
+                        buy_item(item_id)
+
+        if st.button("返回商店分類", key="shop_back_from_consumables"):
+            st.session_state["shop_section"] = "menu"
+            if hasattr(st, "rerun"):
+                st.rerun()
+
+    else:
+        st.markdown("### 🛡️ 裝備鍛造")
+
+        weapon = hero.equipment.get("weapon")
+        weapon_level = getattr(hero, "weapon_upgrade_level", 0)
+        if weapon:
+            st.markdown("#### 🔨 武器強化")
+            if weapon_level >= WEAPON_UPGRADE_MAX_LEVEL:
+                st.caption(f"{weapon['icon']} {weapon['name']} 已達最高等級 +{weapon_level}")
+            else:
+                next_level = weapon_level + 1
+                cost = WEAPON_UPGRADE_COSTS[next_level]
+                current_tag = f"+{weapon_level}"
+                next_tag = f"+{next_level}"
+                st.markdown(
+                    f"<span style='color:#000000;'>{weapon['icon']} {weapon['name']} {current_tag}</span> → {next_tag}"
+                    f"（每級 +{WEAPON_UPGRADE_ATK_PER_LEVEL} 攻擊）",
+                    unsafe_allow_html=True,
+                )
+                if st.button(
+                    f"強化武器到 {next_tag}（💰{cost}）",
+                    key="upgrade_weapon",
+                    disabled=(hero.gold < cost),
+                ):
+                    upgrade_weapon_in_shop()
+
+        st.markdown("#### 🛍️ 裝備商品")
+        equipment_items = [
+            (item_id, item)
+            for item_id, item in SHOP_ITEMS.items()
+            if item.get("kind") == "equipment" and item.get("required_class") == hero.class_key
+        ]
+
+        cols_per_row = 3
+        for start in range(0, len(equipment_items), cols_per_row):
+            row_items = equipment_items[start:start + cols_per_row]
+            cols = st.columns(cols_per_row)
+            for col_index, (item_id, item) in enumerate(row_items):
+                affordable = hero.gold >= item["price"]
+                is_accessory_item = item.get("slot") != "ring"
+                has_any_accessory_equipped = bool(hero.equipment.get("accessory"))
+                already_owned_accessory = bool(
+                    is_accessory_item
+                    and has_any_accessory_equipped
+                )
+                label = f"購買 {item['icon']} {item['name']}（💰{item['price']}）"
+                if already_owned_accessory:
+                    label = f"已裝備配件，無法購買 {item['icon']} {item['name']}"
+
+                with cols[col_index]:
+                    st.markdown(f"**{item['icon']} {item['name']}**")
+                    st.caption(item["desc"])
+                    if item.get("kind") == "equipment":
+                        required = CLASSES[next((k for k, v in CLASSES.items() if v["key"] == item["required_class"]), "1")]
+                        st.caption(f"職業限定：{required['icon']} {required['name']}")
+                    if st.button(
+                        label,
+                        key=f"buy_{item['key']}",
+                        disabled=(not affordable or already_owned_accessory),
+                        use_container_width=True,
+                    ):
+                        buy_item(item_id)
+
+        if st.button("返回商店分類", key="shop_back_from_equipment"):
+            st.session_state["shop_section"] = "menu"
+            if hasattr(st, "rerun"):
+                st.rerun()
     if st.button("離開商店"):
         game["phase"] = "explore"
+        st.session_state["shop_section"] = "menu"
         save_game(game)
         if hasattr(st, "rerun"):
             st.rerun()
