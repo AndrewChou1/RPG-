@@ -154,6 +154,22 @@ def clamp(v, lo, hi):
     return max(lo, min(hi, v))
 
 
+def render_red_hp_bar(current, maximum, label):
+    ratio = clamp(current / maximum if maximum > 0 else 0, 0.0, 1.0)
+    percent = int(round(ratio * 100))
+    st.markdown(
+        f"""
+        <div style="margin: 0.2rem 0 0.7rem 0;">
+            <div style="font-size: 0.9rem; margin-bottom: 0.25rem; color: #111;">{label}</div>
+            <div style="width: 100%; background: #f3d1d1; border-radius: 999px; height: 0.9rem; overflow: hidden; border: 1px solid #d79a9a;">
+                <div style="width: {percent}%; background: linear-gradient(90deg, #c62828 0%, #e53935 100%); height: 100%;"></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 class Hero:
     def __init__(self, cls_data):
         self.class_key = cls_data["key"]
@@ -844,7 +860,8 @@ def render_status(game):
     ring_def_bonus = sum(ring["def_bonus"] for ring in rings)
 
     col1, col2 = st.columns(2)
-    col1.progress(min(hero.hp / hero.hp_max, 1.0), text=f"HP：{hero.hp}/{hero.hp_max}")
+    with col1:
+        render_red_hp_bar(hero.hp, hero.hp_max, f"HP：{hero.hp}/{hero.hp_max}")
     col2.progress(min(hero.mp / hero.mp_max, 1.0), text=f"MP：{hero.mp}/{hero.mp_max}")
 
 
@@ -893,7 +910,7 @@ def render_battle_screen(game):
                     f"MP：{hero.mp}/{hero.mp_max}<br>"
                     f"攻擊 / 防禦：{hero.atk} / {hero.defense}<br>"
                     f"</div>", unsafe_allow_html=True)
-        st.progress(min(hero.hp / hero.hp_max, 1.0), text=f"你的 HP：{hero.hp}/{hero.hp_max}")
+                render_red_hp_bar(hero.hp, hero.hp_max, f"你的 HP：{hero.hp}/{hero.hp_max}")
         st.progress(min(hero.mp / hero.mp_max, 1.0), text=f"你的 MP：{hero.mp}/{hero.mp_max}")
     with col_right:
         st.markdown("<div style='font-size:0.88rem; line-height:1.35; padding-left: 0.5rem;'>"
@@ -902,7 +919,7 @@ def render_battle_screen(game):
                     f"HP：{enemy.hp}/{enemy.hp_max}<br>"
                     f"攻擊 / 防禦：{enemy.atk} / {enemy.defense}<br>"
                     f"</div>", unsafe_allow_html=True)
-        st.progress(min(enemy.hp / enemy.hp_max, 1.0), text=f"敵人 HP：{enemy.hp}/{enemy.hp_max}")
+        render_red_hp_bar(enemy.hp, enemy.hp_max, f"敵人 HP：{enemy.hp}/{enemy.hp_max}")
 
     st.markdown("<div style='font-size:0.92rem; line-height:1.4;'>選擇你的行動：</div>", unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
