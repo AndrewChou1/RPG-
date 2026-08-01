@@ -570,14 +570,14 @@ def handle_explore(action):
             start_boss_fight(game)
             return
         roll = random.random()
-        if roll < 0.65:
+        if roll < 0.75:
             pool = current_enemy_pool(game)
             base = random.choice(pool[: min(len(pool), game["floor"] + 2)])
             game["enemy"] = Enemy(base, floor=game["floor"])
             log(f"{game['enemy'].icon} {game['enemy'].name} 擋住了去路！")
             save_game(game)
             return
-        elif roll < 0.85:
+        elif roll < 0.95:
             gold = random.randint(8, 20) + game["floor"] * 3
             hero.gold += gold
             log(f"你發現寶箱，獲得 💰{gold} 金幣。")
