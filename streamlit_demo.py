@@ -170,6 +170,22 @@ def render_red_hp_bar(current, maximum, label):
     )
 
 
+def render_blue_mp_bar(current, maximum, label):
+    ratio = clamp(current / maximum if maximum > 0 else 0, 0.0, 1.0)
+    percent = int(round(ratio * 100))
+    st.markdown(
+        f"""
+        <div style="margin: 0.2rem 0 0.7rem 0;">
+            <div style="font-size: 0.9rem; margin-bottom: 0.25rem; color: #111;">{label}</div>
+            <div style="width: 100%; background: #d1d9f3; border-radius: 999px; height: 0.9rem; overflow: hidden; border: 1px solid #9aaad7;">
+                <div style="width: {percent}%; background: linear-gradient(90deg, #1565c0 0%, #1e88e5 100%); height: 100%;"></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 class Hero:
     def __init__(self, cls_data):
         self.class_key = cls_data["key"]
@@ -731,26 +747,26 @@ def upgrade_weapon_in_shop():
             st.rerun()
 
 
-def render_sidebar():
-    st.sidebar.title("🎮 遊戲設定")
-    st.sidebar.caption("選擇職業後，點擊開始新冒險。")
-    st.session_state.selected_class = st.sidebar.selectbox(
+def render_left_panel():
+    st.markdown("### 🎮 遊戲設定")
+    st.caption("選擇職業後，點擊開始新冒險。")
+    st.session_state.selected_class = st.selectbox(
         "職業",
         options=list(CLASSES.keys()),
         format_func=lambda key: f"{CLASSES[key]['icon']} {CLASSES[key]['name']}",
     )
     log_selected_class_if_needed()
-    st.session_state.player_name = st.sidebar.text_input("角色名稱", value=st.session_state.get("player_name", "冒險者"))
-    if st.sidebar.button("開始新冒險", use_container_width=True):
+    st.session_state.player_name = st.text_input("角色名稱", value=st.session_state.get("player_name", "冒險者"))
+    if st.button("開始新冒險", key="start_new_game", use_container_width=True):
         start_new_game()
-    if st.sidebar.button("重新整理介面", use_container_width=True):
+    if st.button("重新整理介面", key="refresh_layout", use_container_width=True):
         st.rerun()
 
     game = st.session_state.get("game")
     hero = game["hero"] if game else None
     if hero:
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("裝備")
+        st.markdown("---")
+        st.subheader("裝備")
         weapon = hero.equipment.get("weapon")
         accessory = hero.equipment.get("accessory")
         rings = hero.equipment.get("rings", [])
@@ -759,12 +775,12 @@ def render_sidebar():
             weapon_tag = f"+{clamp(weapon_level, 0, WEAPON_UPGRADE_MAX_LEVEL)}"
             weapon_upgrade_bonus = hero.weapon_upgrade_bonus()
             weapon_detail = f"（強化 +{weapon_upgrade_bonus} ATK）"
-            st.sidebar.markdown(
+            st.markdown(
                 f"<span style='color:#000000;'>武器：{weapon['icon']} {weapon['name']} {weapon_tag} {weapon_detail}</span>",
                 unsafe_allow_html=True,
             )
         else:
-            st.sidebar.caption("武器：尚未裝備")
+            st.caption("武器：尚未裝備")
         if accessory:
             bonus_text = []
             if accessory.get("mp_bonus", 0):
@@ -773,12 +789,12 @@ def render_sidebar():
                 bonus_text.append(f"+{accessory['atk_bonus']} ATK")
             if accessory.get("def_bonus", 0):
                 bonus_text.append(f"+{accessory['def_bonus']} DEF")
-            st.sidebar.markdown(
+            st.markdown(
                 f"<span style='color:#000000;'>配件：{accessory['icon']} {accessory['name']} {' '.join(bonus_text)}</span>",
                 unsafe_allow_html=True,
             )
         else:
-            st.sidebar.caption("配件：尚未裝備")
+            st.caption("配件：尚未裝備")
         if rings:
             ring_groups = {}
             for ring in rings:
@@ -804,9 +820,9 @@ def render_sidebar():
                     f"{group['icon']} {group['name']}*{group['count']} "
                     f"[+{group['atk_total']} ATK] [+{group['def_total']} DEF]"
                 )
-            st.sidebar.markdown("戒指：<br>" + "<br>".join(ring_labels), unsafe_allow_html=True)
+            st.markdown("戒指：<br>" + "<br>".join(ring_labels), unsafe_allow_html=True)
         else:
-            st.sidebar.caption("戒指：尚未裝備")
+            st.caption("戒指：尚未裝備")
 
         weapon_bonus = weapon["atk_bonus"] if weapon else 0
         weapon_upgrade_bonus = hero.weapon_upgrade_bonus() if weapon else 0
@@ -820,10 +836,10 @@ def render_sidebar():
         level_atk_bonus = (hero.level - 1) * 2
         level_def_bonus = hero.level - 1
 
-        st.sidebar.markdown(
+        st.markdown(
             f"**攻擊力**：原始 {hero.base_atk} + 升級 {level_atk_bonus} + 武器 {weapon_bonus} + 強化 {weapon_upgrade_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus}（{ring_count} 枚） = {hero.atk}"
         )
-        st.sidebar.markdown(
+        st.markdown(
             f"**防禦力**：原始 {hero.base_defense} + 升級 {level_def_bonus} + 武器 {weapon_def_bonus} + 配件 {accessory_def_bonus} + 戒指 {ring_def_bonus}（{ring_count} 枚） = {hero.defense}"
         )
 
@@ -862,7 +878,8 @@ def render_status(game):
     col1, col2 = st.columns(2)
     with col1:
         render_red_hp_bar(hero.hp, hero.hp_max, f"HP：{hero.hp}/{hero.hp_max}")
-    col2.progress(min(hero.mp / hero.mp_max, 1.0), text=f"MP：{hero.mp}/{hero.mp_max}")
+    with col2:
+        render_blue_mp_bar(hero.mp, hero.mp_max, f"MP：{hero.mp}/{hero.mp_max}")
 
 
 def render_explore_screen(game):
@@ -911,7 +928,7 @@ def render_battle_screen(game):
                     f"攻擊 / 防禦：{hero.atk} / {hero.defense}<br>"
                     f"</div>", unsafe_allow_html=True)
         render_red_hp_bar(hero.hp, hero.hp_max, f"你的 HP：{hero.hp}/{hero.hp_max}")
-        st.progress(min(hero.mp / hero.mp_max, 1.0), text=f"你的 MP：{hero.mp}/{hero.mp_max}")
+        render_blue_mp_bar(hero.mp, hero.mp_max, f"你的 MP：{hero.mp}/{hero.mp_max}")
     with col_right:
         st.markdown("<div style='font-size:0.88rem; line-height:1.35; padding-left: 0.5rem;'>"
                     f"<strong>敵人</strong><br>"
@@ -983,14 +1000,14 @@ def render_shop_screen(game):
                 affordable = hero.gold >= item["price"]
                 with cols[col_index]:
                     st.markdown(f"**{item['icon']} {item['name']}**")
-                    st.caption(item["desc"])
                     if st.button(
-                        f"購買 {item['icon']} {item['name']}（💰{item['price']}）",
+                        f"💰{item['price']} 購買",
                         key=f"buy_{item['key']}",
                         disabled=(not affordable),
                         use_container_width=True,
                     ):
                         buy_item(item_id)
+                    st.caption(item["desc"])
 
         if st.button("返回商店分類", key="shop_back_from_consumables"):
             st.session_state["shop_section"] = "menu"
@@ -1048,10 +1065,6 @@ def render_shop_screen(game):
 
                 with cols[col_index]:
                     st.markdown(f"**{item['icon']} {item['name']}**")
-                    st.caption(item["desc"])
-                    if item.get("kind") == "equipment":
-                        required = CLASSES[next((k for k, v in CLASSES.items() if v["key"] == item["required_class"]), "1")]
-                        st.caption(f"職業限定：{required['icon']} {required['name']}")
                     if st.button(
                         label,
                         key=f"buy_{item['key']}",
@@ -1059,6 +1072,10 @@ def render_shop_screen(game):
                         use_container_width=True,
                     ):
                         buy_item(item_id)
+                    st.caption(item["desc"])
+                    if item.get("kind") == "equipment":
+                        required = CLASSES[next((k for k, v in CLASSES.items() if v["key"] == item["required_class"]), "1")]
+                        st.caption(f"職業限定：{required['icon']} {required['name']}")
 
         if st.button("返回商店分類", key="shop_back_from_equipment"):
             st.session_state["shop_section"] = "menu"
@@ -1104,10 +1121,6 @@ def render_chapter_complete(game):
             start_chapter_three(game)
             if hasattr(st, "rerun"):
                 st.rerun()
-    if st.button("返回主選單"):
-        start_new_game()
-        if hasattr(st, "rerun"):
-            st.rerun()
 
 
 def render_game_over(game):
@@ -1129,36 +1142,40 @@ def render_victory(game):
 def main():
     ensure_game_state()
     render_header()
-    render_sidebar()
+    left_col, center_col, right_col = st.columns([1.1, 2.0, 1.2], gap="large")
+
+    with left_col:
+        render_left_panel()
 
     game = st.session_state.game
-    if game["phase"] != "battle":
-        render_status(game)
+    with center_col:
+        if game["phase"] != "battle":
+            render_status(game)
 
-    if game["phase"] == "start":
-        st.info("選擇職業並開始冒險。")
-    elif game["phase"] == "explore":
-        render_explore_screen(game)
-    elif game["phase"] == "battle":
-        render_battle_screen(game)
-    elif game["phase"] == "shop":
-        render_shop_screen(game)
-    elif game["phase"] == "inventory":
-        render_inventory_screen(game)
-    elif game["phase"] == "gameover":
-        render_game_over(game)
-    elif game["phase"] == "chapter_complete":
-        render_chapter_complete(game)
-    elif game["phase"] == "victory":
-        render_victory(game)
+        if game["phase"] == "start":
+            st.info("選擇職業並開始冒險。")
+        elif game["phase"] == "explore":
+            render_explore_screen(game)
+        elif game["phase"] == "battle":
+            render_battle_screen(game)
+        elif game["phase"] == "shop":
+            render_shop_screen(game)
+        elif game["phase"] == "inventory":
+            render_inventory_screen(game)
+        elif game["phase"] == "gameover":
+            render_game_over(game)
+        elif game["phase"] == "chapter_complete":
+            render_chapter_complete(game)
+        elif game["phase"] == "victory":
+            render_victory(game)
 
-    st.markdown("---")
-    st.subheader("📝 冒險紀錄")
-    if game["messages"]:
-        for message in reversed(game["messages"]):
-            st.write(message)
-    else:
-        st.write("尚無冒險紀錄。")
+    with right_col:
+        st.subheader("📝 冒險紀錄")
+        if game["messages"]:
+            for message in reversed(game["messages"]):
+                st.write(message)
+        else:
+            st.write("尚無冒險紀錄。")
 
 
 if __name__ == "__main__":
