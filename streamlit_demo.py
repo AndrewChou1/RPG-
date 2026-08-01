@@ -336,6 +336,38 @@ def create_hero(class_key, player_name):
     return hero
 
 
+def normalize_ring(ring):
+    # Normalize legacy ring entries that may miss bonus fields.
+    ring_key = ring.get("key")
+    ring_data = RINGS.get(ring_key)
+    if ring_data is None:
+        ring_data = next((r for r in RINGS.values() if r.get("name") == ring.get("name")), None)
+    if ring_data is None:
+        ring_data = ring
+    return {
+        "key": ring_data.get("key", ring.get("key")),
+        "icon": ring_data.get("icon", ring.get("icon", "💍")),
+        "name": ring_data.get("name", ring.get("name", "未知戒指")),
+        "atk_bonus": ring_data.get("atk_bonus", ring.get("atk_bonus", 0)),
+        "def_bonus": ring_data.get("def_bonus", ring.get("def_bonus", 0)),
+    }
+
+
+def log_selected_class_if_needed():
+    game = st.session_state.get("game")
+    if not game or game.get("phase") != "start":
+        return
+    class_key = st.session_state.get("selected_class", "1")
+    cls_data = CLASSES.get(class_key)
+    if not cls_data:
+        return
+    last_logged = st.session_state.get("_last_logged_selected_class")
+    if last_logged == class_key:
+        return
+    st.session_state["_last_logged_selected_class"] = class_key
+    log(f"你選擇了職業：{cls_data['icon']} {cls_data['name']}（{cls_data['desc']}）", game=game)
+
+
 def start_new_game():
     game = st.session_state.game
     player_name = st.session_state.get("player_name", "冒險者").strip() or "冒險者"
@@ -583,6 +615,7 @@ def render_sidebar():
         options=list(CLASSES.keys()),
         format_func=lambda key: f"{CLASSES[key]['icon']} {CLASSES[key]['name']}",
     )
+    log_selected_class_if_needed()
     st.session_state.player_name = st.sidebar.text_input("角色名稱", value=st.session_state.get("player_name", "冒險者"))
     if st.sidebar.button("開始新冒險", use_container_width=True):
         start_new_game()
@@ -609,19 +642,18 @@ def render_sidebar():
                 bonus_text.append(f"+{accessory['atk_bonus']} ATK")
             if accessory.get("def_bonus", 0):
                 bonus_text.append(f"+{accessory['def_bonus']} DEF")
-            st.sidebar.caption(f"配件：{accessory['icon']} {accessory['name']} {' '.join(bonus_text)}")
+            st.sidebar.markdown(
+                f"<span style='color:#000000;'>配件：{accessory['icon']} {accessory['name']} {' '.join(bonus_text)}</span>",
+                unsafe_allow_html=True,
+            )
         else:
             st.sidebar.caption("配件：尚未裝備")
         if rings:
             ring_groups = {}
             for ring in rings:
-                # Fallback to canonical ring data for older session entries that may miss bonus fields.
-                ring_key = ring.get("key")
-                ring_data = RINGS.get(ring_key)
-                if ring_data is None:
-                    ring_data = next((r for r in RINGS.values() if r.get("name") == ring.get("name")), ring)
-                atk_bonus = ring_data.get("atk_bonus", ring.get("atk_bonus", 0))
-                def_bonus = ring_data.get("def_bonus", ring.get("def_bonus", 0))
+                ring_data = normalize_ring(ring)
+                atk_bonus = ring_data["atk_bonus"]
+                def_bonus = ring_data["def_bonus"]
                 group_key = ring_data.get("key") or ring_data.get("name")
                 if group_key not in ring_groups:
                     ring_groups[group_key] = {
@@ -639,7 +671,7 @@ def render_sidebar():
             for group in ring_groups.values():
                 ring_labels.append(
                     f"{group['icon']} {group['name']}*{group['count']} "
-                    f"+{group['atk_total']} ATK +{group['def_total']} DEF"
+                    f"[+{group['atk_total']} ATK] [+{group['def_total']} DEF]"
                 )
             st.sidebar.text("戒指：" + ", ".join(ring_labels))
         else:
@@ -647,13 +679,21 @@ def render_sidebar():
 
         weapon_bonus = weapon["atk_bonus"] if weapon else 0
         accessory_bonus = accessory["atk_bonus"] if accessory else 0
-        ring_atk_bonus = sum(ring["atk_bonus"] for ring in rings)
+        normalized_rings = [normalize_ring(ring) for ring in rings]
+        ring_atk_bonus = sum(ring["atk_bonus"] for ring in normalized_rings)
         weapon_def_bonus = weapon["def_bonus"] if weapon else 0
         accessory_def_bonus = accessory["def_bonus"] if accessory else 0
-        ring_def_bonus = sum(ring["def_bonus"] for ring in rings)
+        ring_def_bonus = sum(ring["def_bonus"] for ring in normalized_rings)
+        ring_count = len(normalized_rings)
+        level_atk_bonus = (hero.level - 1) * 2
+        level_def_bonus = hero.level - 1
 
-        st.sidebar.markdown(f"**攻擊力**：原始 {hero.base_atk} + 武器 {weapon_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus} = {hero.atk}")
-        st.sidebar.markdown(f"**防禦力**：原始 {hero.base_defense} + 武器 {weapon_def_bonus} + 配件 {accessory_def_bonus} + 戒指 {ring_def_bonus} = {hero.defense}")
+        st.sidebar.markdown(
+            f"**攻擊力**：原始 {hero.base_atk} + 升級 {level_atk_bonus} + 武器 {weapon_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus}（{ring_count} 枚） = {hero.atk}"
+        )
+        st.sidebar.markdown(
+            f"**防禦力**：原始 {hero.base_defense} + 升級 {level_def_bonus} + 武器 {weapon_def_bonus} + 配件 {accessory_def_bonus} + 戒指 {ring_def_bonus}（{ring_count} 枚） = {hero.defense}"
+        )
 
 
 def render_header():
@@ -852,9 +892,7 @@ def main():
 
     if game["phase"] == "start":
         st.info("選擇職業並開始冒險。")
-        return
-
-    if game["phase"] == "explore":
+    elif game["phase"] == "explore":
         render_explore_screen(game)
     elif game["phase"] == "battle":
         render_battle_screen(game)
@@ -872,7 +910,7 @@ def main():
     st.markdown("---")
     st.subheader("📝 冒險紀錄")
     if game["messages"]:
-        for message in reversed(game["messages"][-10:]):
+        for message in reversed(game["messages"]):
             st.write(message)
     else:
         st.write("尚無冒險紀錄。")
