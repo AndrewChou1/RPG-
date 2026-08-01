@@ -1029,8 +1029,12 @@ def render_game_over(game):
 
 def render_victory(game):
     hero = game["hero"]
-    st.success("深淵已淨化")
-    st.markdown(f"你以 Lv.{hero.level} 的 {hero.name} 之姿，走出了地城。")
+    st.success("🎉✨ 深淵已淨化 ✨🎉")
+    st.markdown(
+        f"你以 Lv.{hero.level} 的 **{hero.name}** 之姿，踏著黎明前的微光走出地城。"
+    )
+    st.markdown("火把一盞盞點亮，城門前爆出歡呼，鐘聲與花火在夜空中交織。 🏰🎆")
+    st.markdown("旅人傳頌你的戰歌，孩童高喊你的名字，而黑夜終於學會了退去。 🕊️🌅")
 
 
 def main():
