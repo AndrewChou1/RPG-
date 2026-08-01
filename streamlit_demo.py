@@ -613,7 +613,35 @@ def render_sidebar():
         else:
             st.sidebar.caption("配件：尚未裝備")
         if rings:
-            st.sidebar.caption("戒指：" + ", ".join(f"{ring['icon']} {ring['name']}" for ring in rings))
+            ring_groups = {}
+            for ring in rings:
+                # Fallback to canonical ring data for older session entries that may miss bonus fields.
+                ring_key = ring.get("key")
+                ring_data = RINGS.get(ring_key)
+                if ring_data is None:
+                    ring_data = next((r for r in RINGS.values() if r.get("name") == ring.get("name")), ring)
+                atk_bonus = ring_data.get("atk_bonus", ring.get("atk_bonus", 0))
+                def_bonus = ring_data.get("def_bonus", ring.get("def_bonus", 0))
+                group_key = ring_data.get("key") or ring_data.get("name")
+                if group_key not in ring_groups:
+                    ring_groups[group_key] = {
+                        "icon": ring_data.get("icon", "💍"),
+                        "name": ring_data.get("name", "未知戒指"),
+                        "count": 0,
+                        "atk_total": 0,
+                        "def_total": 0,
+                    }
+                ring_groups[group_key]["count"] += 1
+                ring_groups[group_key]["atk_total"] += atk_bonus
+                ring_groups[group_key]["def_total"] += def_bonus
+
+            ring_labels = []
+            for group in ring_groups.values():
+                ring_labels.append(
+                    f"{group['icon']} {group['name']}*{group['count']} "
+                    f"+{group['atk_total']} ATK +{group['def_total']} DEF"
+                )
+            st.sidebar.text("戒指：" + ", ".join(ring_labels))
         else:
             st.sidebar.caption("戒指：尚未裝備")
 
