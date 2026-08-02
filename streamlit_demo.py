@@ -56,9 +56,9 @@ ACCESSORIES = {
 }
 
 HATS = {
-    "warrior_helm": {"key": "warrior_helm", "name": "戰痕鋼盔", "icon": "🪖", "required_class": "warrior", "atk_bonus": 1, "def_bonus": 3, "desc": "刻滿戰痕的鋼盔，讓戰士在近戰中更穩健。"},
-    "mage_hat": {"key": "mage_hat", "name": "祕紋法帽", "icon": "🎩", "required_class": "mage", "mp_bonus": 6, "atk_bonus": 2, "def_bonus": 1, "desc": "縫入祕紋的法帽，能聚攏魔力與專注。"},
-    "rogue_hood": {"key": "rogue_hood", "name": "夜行兜帽", "icon": "🧢", "required_class": "rogue", "atk_bonus": 2, "def_bonus": 2, "desc": "吸收光線的兜帽，讓盜賊更難被鎖定。"},
+    "warrior_helm": {"key": "warrior_helm", "name": "戰痕鋼盔", "icon": "🪖", "required_class": "warrior", "atk_bonus": 1, "def_bonus": 3, "desc": "深淵王掉落的戰痕鋼盔，刻滿戰痕，讓戰士在近戰中更穩健。"},
+    "mage_hat": {"key": "mage_hat", "name": "祕紋法帽", "icon": "🎩", "required_class": "mage", "mp_bonus": 6, "atk_bonus": 2, "def_bonus": 1, "desc": "深淵王掉落的祕紋法帽，縫入祕紋，能聚攏魔力與專注。"},
+    "rogue_hood": {"key": "rogue_hood", "name": "夜行兜帽", "icon": "🧢", "required_class": "rogue", "atk_bonus": 2, "def_bonus": 2, "desc": "深淵王掉落的夜行兜帽，能吸收光線，讓盜賊更難被鎖定。"},
 }
 
 RINGS = {
@@ -933,6 +933,7 @@ def render_left_panel():
                 f"<span style='color:#000000;'>帽子：{hat['icon']} {hat['name']} {' '.join(bonus_text)}</span>",
                 unsafe_allow_html=True,
             )
+            st.caption(hat.get("desc", ""))
         else:
             st.caption("帽子：尚未裝備")
         if accessory:
