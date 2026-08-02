@@ -264,6 +264,7 @@ class Hero:
         previous = self.equipment.get("accessory")
         if previous and previous.get("key") == equipment_key:
             return True
+        new_mp_bonus = equipment.get("mp_bonus", 0)
         if previous:
             self.atk -= previous.get("atk_bonus", 0)
             self.defense -= previous.get("def_bonus", 0)
@@ -272,8 +273,8 @@ class Hero:
         self.equipment["accessory"] = equipment
         self.atk += equipment.get("atk_bonus", 0)
         self.defense += equipment.get("def_bonus", 0)
-        self.mp_max += equipment.get("mp_bonus", 0)
-        self.mp = min(self.mp, self.mp_max)
+        self.mp_max += new_mp_bonus
+        self.mp = min(self.mp + new_mp_bonus, self.mp_max)
         return True
 
     def equip_hat(self, hat_key):
@@ -285,6 +286,7 @@ class Hero:
         previous = self.equipment.get("hat")
         if previous and previous.get("key") == hat_key:
             return True
+        new_mp_bonus = hat.get("mp_bonus", 0)
         if previous:
             self.atk -= previous.get("atk_bonus", 0)
             self.defense -= previous.get("def_bonus", 0)
@@ -293,8 +295,8 @@ class Hero:
         self.equipment["hat"] = hat
         self.atk += hat.get("atk_bonus", 0)
         self.defense += hat.get("def_bonus", 0)
-        self.mp_max += hat.get("mp_bonus", 0)
-        self.mp = min(self.mp, self.mp_max)
+        self.mp_max += new_mp_bonus
+        self.mp = min(self.mp + new_mp_bonus, self.mp_max)
         return True
 
     def equip_ring(self, ring_key):
