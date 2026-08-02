@@ -42,7 +42,7 @@ CLASSES = {
 
 WEAPONS = {
     "sword": {"key": "sword", "name": "鐵劍", "icon": "🗡️", "required_class": "warrior", "atk_bonus": 2, "def_bonus": 1, "desc": "戰士的基礎兵器。"},
-    "staff": {"key": "staff", "name": "學徒法杖", "icon": "🪄", "required_class": "mage", "atk_bonus": 2, "def_bonus": 0, "desc": "法師的啟蒙法器。"},
+    "staff": {"key": "staff", "name": "法杖", "icon": "🪄", "required_class": "mage", "atk_bonus": 2, "def_bonus": 0, "mp_bonus": 5, "desc": "法師的啟蒙法器。"},
     "dagger": {"key": "dagger", "name": "短匕首", "icon": "🗡️", "required_class": "rogue", "atk_bonus": 1, "def_bonus": 1, "desc": "盜賊的靈巧短刃。"},
 }
 
@@ -98,7 +98,7 @@ SHOP_ITEMS = {
 }
 
 WEAPON_UPGRADE_MAX_LEVEL = 3
-WEAPON_UPGRADE_ATK_PER_LEVEL = 2
+WEAPON_UPGRADE_ATK_PER_LEVEL = 3
 WEAPON_UPGRADE_COSTS = {
     1: 20,
     2: 35,
@@ -247,12 +247,17 @@ class Hero:
         if not weapon or weapon.get("required_class") != self.class_key:
             return False
         previous = self.equipment.get("weapon")
+        new_mp_bonus = weapon.get("mp_bonus", 0)
         if previous:
             self.atk -= previous.get("atk_bonus", 0)
             self.defense -= previous.get("def_bonus", 0)
+            self.mp_max -= previous.get("mp_bonus", 0)
+            self.mp = min(self.mp, self.mp_max)
         self.equipment["weapon"] = weapon
         self.atk += weapon.get("atk_bonus", 0)
         self.defense += weapon.get("def_bonus", 0)
+        self.mp_max += new_mp_bonus
+        self.mp = min(self.mp + new_mp_bonus, self.mp_max)
         return True
 
     def equip_equipment(self, equipment_key):
@@ -489,6 +494,22 @@ def ensure_game_state():
             hero.hp = min(hero.hp, hero.hp_max)
             hero.mp = min(hero.mp, hero.mp_max)
             hero.equipment["accessory"] = canonical
+        weapon = hero.equipment.get("weapon")
+        if weapon and weapon.get("key") in WEAPONS:
+            canonical = WEAPONS[weapon["key"]]
+            old_atk_bonus = weapon.get("atk_bonus", 0)
+            old_def_bonus = weapon.get("def_bonus", 0)
+            old_mp_bonus = weapon.get("mp_bonus", 0)
+
+            new_atk_bonus = canonical.get("atk_bonus", 0)
+            new_def_bonus = canonical.get("def_bonus", 0)
+            new_mp_bonus = canonical.get("mp_bonus", 0)
+
+            hero.atk += new_atk_bonus - old_atk_bonus
+            hero.defense += new_def_bonus - old_def_bonus
+            hero.mp_max += new_mp_bonus - old_mp_bonus
+            hero.mp = min(hero.mp, hero.mp_max)
+            hero.equipment["weapon"] = canonical
 
 
 def save_game(game=None):
@@ -1009,6 +1030,45 @@ def render_left_panel():
 
 def render_header():
     st.set_page_config(page_title="幽闇地城", page_icon="🗡️", layout="wide")
+    st.markdown(
+        """
+        <style>
+        /* Make the center gameplay column stand out from side panels. */
+        .stMainBlockContainer > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) > div[data-testid="stVerticalBlock"] {
+            background: linear-gradient(180deg, #fff6e8 0%, #fffdf7 100%);
+            border: 2px solid #e5c28b;
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 12px 28px rgba(72, 40, 10, 0.16);
+        }
+
+        .stMainBlockContainer > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
+            transform: translateY(-2px);
+        }
+
+        .stMainBlockContainer > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) [data-testid="stVerticalBlockBorderWrapper"] {
+            background: linear-gradient(180deg, #ffecc8 0%, #fff8e9 100%) !important;
+            border: 1.5px solid #e7bb74 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 8px 18px rgba(84, 51, 20, 0.12) !important;
+            margin-bottom: 0.7rem;
+            overflow: hidden;
+        }
+
+        .stMainBlockContainer > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) [data-testid="stVerticalBlockBorderWrapper"] > div {
+            background: linear-gradient(180deg, #ffecc8 0%, #fff8e9 100%) !important;
+        }
+
+        @media (max-width: 900px) {
+            .stMainBlockContainer > div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) > div[data-testid="stVerticalBlock"] {
+                border-radius: 12px;
+                padding: 0.8rem 0.75rem;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.title("🕯️ 幽闇地城 ")
     st.caption("選擇職業、探索地城，迎向迷霧試煉。")
 
@@ -1339,24 +1399,26 @@ def main():
     game.setdefault("battle_turn", "player")
     with center_col:
         if game["phase"] not in ("battle", "shop"):
-            render_status(game)
+            with st.container(border=True):
+                render_status(game)
 
-        if game["phase"] == "start":
-            st.info("選擇職業並開始冒險。")
-        elif game["phase"] == "explore":
-            render_explore_screen(game)
-        elif game["phase"] == "battle":
-            render_battle_screen(game)
-        elif game["phase"] == "shop":
-            render_shop_screen(game)
-        elif game["phase"] == "inventory":
-            render_inventory_screen(game)
-        elif game["phase"] == "gameover":
-            render_game_over(game)
-        elif game["phase"] == "chapter_complete":
-            render_chapter_complete(game)
-        elif game["phase"] == "victory":
-            render_victory(game)
+        with st.container(border=True):
+            if game["phase"] == "start":
+                st.info("選擇職業並開始冒險。")
+            elif game["phase"] == "explore":
+                render_explore_screen(game)
+            elif game["phase"] == "battle":
+                render_battle_screen(game)
+            elif game["phase"] == "shop":
+                render_shop_screen(game)
+            elif game["phase"] == "inventory":
+                render_inventory_screen(game)
+            elif game["phase"] == "gameover":
+                render_game_over(game)
+            elif game["phase"] == "chapter_complete":
+                render_chapter_complete(game)
+            elif game["phase"] == "victory":
+                render_victory(game)
 
     with right_col:
         st.subheader("📝 冒險紀錄")
