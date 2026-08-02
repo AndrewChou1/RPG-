@@ -1,5 +1,7 @@
 # 幽闇地城 · Streamlit 小遊戲
 
+> 🌐 目前線上服務：https://streamlit-demo-game-709664523968.asia-east1.run.app/
+
 這是一個以 **Python + Streamlit** 製作的文字風格 RPG 小遊戲示範，
 可在瀏覽器中體驗探索、戰鬥、升級、裝備養成與章節推進。
 
