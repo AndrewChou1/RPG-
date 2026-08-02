@@ -25,8 +25,8 @@ CLASSES = {
     "2": {
         "key": "mage", "name": "法師", "icon": "🔮",
         "desc": "脆皮高輸出，仰賴魔力。",
-        "hp": 38, "mp": 32, "atk": 6, "def": 2,
-        "skill_name": "烈焰爆破", "skill_mp": 10, "skill_mult": 2.6,
+        "hp": 44, "mp": 40, "atk": 8, "def": 4,
+        "skill_name": "烈焰爆破", "skill_mp": 9, "skill_mult": 2.8,
         "skill_desc": "造成 260% 傷害",
         "starting_weapon": "staff",
     },
@@ -53,6 +53,12 @@ ACCESSORIES = {
     "abyss_guard": {"key": "abyss_guard", "name": "深淵護印", "icon": "🛡️", "required_class": "warrior", "atk_bonus": 1, "def_bonus": 4, "desc": "深淵王殞落後留下的護印，大幅強化防禦。"},
     "abyss_focus": {"key": "abyss_focus", "name": "深淵聚焦晶", "icon": "🔮", "required_class": "mage", "mp_bonus": 8, "atk_bonus": 3, "def_bonus": 1, "desc": "吸納地城魔力的晶核，強化法術輸出。"},
     "abyss_step": {"key": "abyss_step", "name": "深淵影靴", "icon": "🥾", "required_class": "rogue", "atk_bonus": 3, "def_bonus": 2, "desc": "沾染深淵氣息的影靴，讓步伐更致命。"},
+}
+
+HATS = {
+    "warrior_helm": {"key": "warrior_helm", "name": "戰痕鋼盔", "icon": "🪖", "required_class": "warrior", "atk_bonus": 1, "def_bonus": 3, "desc": "刻滿戰痕的鋼盔，讓戰士在近戰中更穩健。"},
+    "mage_hat": {"key": "mage_hat", "name": "祕紋法帽", "icon": "🎩", "required_class": "mage", "mp_bonus": 6, "atk_bonus": 2, "def_bonus": 1, "desc": "縫入祕紋的法帽，能聚攏魔力與專注。"},
+    "rogue_hood": {"key": "rogue_hood", "name": "夜行兜帽", "icon": "🧢", "required_class": "rogue", "atk_bonus": 2, "def_bonus": 2, "desc": "吸收光線的兜帽，讓盜賊更難被鎖定。"},
 }
 
 RINGS = {
@@ -141,9 +147,9 @@ CHAPTER_TITLES = {
 
 CHAPTER_BOSS_REWARDS = {
     1: {
-        "warrior": {"slot": "accessory", "key": "abyss_guard"},
-        "mage": {"slot": "accessory", "key": "abyss_focus"},
-        "rogue": {"slot": "accessory", "key": "abyss_step"},
+        "warrior": {"slot": "hat", "key": "warrior_helm"},
+        "mage": {"slot": "hat", "key": "mage_hat"},
+        "rogue": {"slot": "hat", "key": "rogue_hood"},
     },
     2: {
         "warrior": {"slot": "ring", "key": "ring_of_dawn_guard"},
@@ -211,7 +217,7 @@ class Hero:
         self.skill_mult = cls_data["skill_mult"]
         self.gold = 20
         self.inventory = {"potion": 1, "ether": 1, "elixir": 0}
-        self.equipment = {"weapon": None, "accessory": None, "rings": []}
+        self.equipment = {"weapon": None, "hat": None, "accessory": None, "rings": []}
         self.weapon_upgrade_level = 0
         self.equip_weapon(cls_data.get("starting_weapon"))
 
@@ -223,14 +229,16 @@ class Hero:
 
     def status_bar(self):
         weapon = self.equipment.get("weapon")
+        hat = self.equipment.get("hat")
         accessory = self.equipment.get("accessory")
         rings = self.equipment.get("rings", [])
         weapon_text = f"{weapon['icon']} {weapon['name']}" if weapon else "未裝備"
+        hat_text = f"{hat['icon']} {hat['name']}" if hat else "未裝備"
         accessory_text = f"{accessory['icon']} {accessory['name']}" if accessory else "未裝備"
         ring_text = ", ".join(f"{ring['icon']} {ring['name']}" for ring in rings) if rings else "未裝備"
         return (f"{self.icon} {self.name}  Lv.{self.level}   HP {self.hp}/{self.hp_max}   "
                 f"MP {self.mp}/{self.mp_max}   💰{self.gold}   "
-                f"裝備:武器[{weapon_text}] 配件[{accessory_text}] 戒指[{ring_text}]")
+            f"裝備:武器[{weapon_text}] 帽子[{hat_text}] 配件[{accessory_text}] 戒指[{ring_text}]")
 
     def equip_weapon(self, weapon_key):
         if not weapon_key:
@@ -265,6 +273,27 @@ class Hero:
         self.atk += equipment.get("atk_bonus", 0)
         self.defense += equipment.get("def_bonus", 0)
         self.mp_max += equipment.get("mp_bonus", 0)
+        self.mp = min(self.mp, self.mp_max)
+        return True
+
+    def equip_hat(self, hat_key):
+        if not hat_key:
+            return False
+        hat = HATS.get(hat_key)
+        if not hat or hat.get("required_class") != self.class_key:
+            return False
+        previous = self.equipment.get("hat")
+        if previous and previous.get("key") == hat_key:
+            return True
+        if previous:
+            self.atk -= previous.get("atk_bonus", 0)
+            self.defense -= previous.get("def_bonus", 0)
+            self.mp_max -= previous.get("mp_bonus", 0)
+            self.mp = min(self.mp, self.mp_max)
+        self.equipment["hat"] = hat
+        self.atk += hat.get("atk_bonus", 0)
+        self.defense += hat.get("def_bonus", 0)
+        self.mp_max += hat.get("mp_bonus", 0)
         self.mp = min(self.mp, self.mp_max)
         return True
 
@@ -415,6 +444,17 @@ def current_boss_data(game):
 def ensure_game_state():
     if "game" not in st.session_state:
         st.session_state.game = init_game_state()
+    game = st.session_state.get("game")
+    hero = game.get("hero") if game else None
+    if hero:
+        # Backward compatibility: old saves may not have a hat slot yet.
+        hero.equipment.setdefault("hat", None)
+        hero.equipment.setdefault("accessory", None)
+        hero.equipment.setdefault("rings", [])
+        legacy_accessory = hero.equipment.get("accessory")
+        if hero.equipment.get("hat") is None and legacy_accessory and legacy_accessory.get("key") in HATS:
+            hero.equipment["hat"] = HATS[legacy_accessory["key"]]
+            hero.equipment["accessory"] = None
 
 
 def save_game(game=None):
@@ -466,6 +506,10 @@ def grant_boss_reward(hero, chapter):
         if not hero.equip_equipment(reward["key"]):
             return None
         item = ACCESSORIES[reward["key"]]
+    elif reward["slot"] == "hat":
+        if not hero.equip_hat(reward["key"]):
+            return None
+        item = HATS[reward["key"]]
     else:
         if not hero.equip_ring(reward["key"]):
             return None
@@ -826,6 +870,7 @@ def render_left_panel():
         st.markdown("---")
         st.subheader("裝備")
         weapon = hero.equipment.get("weapon")
+        hat = hero.equipment.get("hat")
         accessory = hero.equipment.get("accessory")
         rings = hero.equipment.get("rings", [])
         if weapon:
@@ -839,6 +884,20 @@ def render_left_panel():
             )
         else:
             st.caption("武器：尚未裝備")
+        if hat:
+            bonus_text = []
+            if hat.get("mp_bonus", 0):
+                bonus_text.append(f"+{hat['mp_bonus']} MP")
+            if hat.get("atk_bonus", 0):
+                bonus_text.append(f"+{hat['atk_bonus']} ATK")
+            if hat.get("def_bonus", 0):
+                bonus_text.append(f"+{hat['def_bonus']} DEF")
+            st.markdown(
+                f"<span style='color:#000000;'>帽子：{hat['icon']} {hat['name']} {' '.join(bonus_text)}</span>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("帽子：尚未裝備")
         if accessory:
             bonus_text = []
             if accessory.get("mp_bonus", 0):
@@ -884,10 +943,12 @@ def render_left_panel():
 
         weapon_bonus = weapon["atk_bonus"] if weapon else 0
         weapon_upgrade_bonus = hero.weapon_upgrade_bonus() if weapon else 0
+        hat_bonus = hat["atk_bonus"] if hat else 0
         accessory_bonus = accessory["atk_bonus"] if accessory else 0
         normalized_rings = [normalize_ring(ring) for ring in rings]
         ring_atk_bonus = sum(ring["atk_bonus"] for ring in normalized_rings)
         weapon_def_bonus = weapon["def_bonus"] if weapon else 0
+        hat_def_bonus = hat["def_bonus"] if hat else 0
         accessory_def_bonus = accessory["def_bonus"] if accessory else 0
         ring_def_bonus = sum(ring["def_bonus"] for ring in normalized_rings)
         ring_count = len(normalized_rings)
@@ -895,10 +956,10 @@ def render_left_panel():
         level_def_bonus = hero.level - 1
 
         st.markdown(
-            f"**攻擊力**：原始 {hero.base_atk} + 升級 {level_atk_bonus} + 武器 {weapon_bonus} + 強化 {weapon_upgrade_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus}（{ring_count} 枚） = {hero.atk}"
+            f"**攻擊力**：原始 {hero.base_atk} + 升級 {level_atk_bonus} + 武器 {weapon_bonus} + 強化 {weapon_upgrade_bonus} + 帽子 {hat_bonus} + 配件 {accessory_bonus} + 戒指 {ring_atk_bonus}（{ring_count} 枚） = {hero.atk}"
         )
         st.markdown(
-            f"**防禦力**：原始 {hero.base_defense} + 升級 {level_def_bonus} + 武器 {weapon_def_bonus} + 配件 {accessory_def_bonus} + 戒指 {ring_def_bonus}（{ring_count} 枚） = {hero.defense}"
+            f"**防禦力**：原始 {hero.base_defense} + 升級 {level_def_bonus} + 武器 {weapon_def_bonus} + 帽子 {hat_def_bonus} + 配件 {accessory_def_bonus} + 戒指 {ring_def_bonus}（{ring_count} 枚） = {hero.defense}"
         )
 
 
@@ -922,16 +983,9 @@ def render_status(game):
     col3.metric("等級", f"Lv.{hero.level}")
     col4.metric("金幣", f"💰{hero.gold}")
 
-    weapon = hero.equipment.get("weapon")
-    accessory = hero.equipment.get("accessory")
-    rings = hero.equipment.get("rings", [])
-
-    weapon_bonus = weapon["atk_bonus"] if weapon else 0
-    accessory_bonus = accessory["atk_bonus"] if accessory else 0
-    ring_atk_bonus = sum(ring["atk_bonus"] for ring in rings)
-    weapon_def_bonus = weapon["def_bonus"] if weapon else 0
-    accessory_def_bonus = accessory["def_bonus"] if accessory else 0
-    ring_def_bonus = sum(ring["def_bonus"] for ring in rings)
+    col1, col2 = st.columns(2)
+    col1.metric("攻擊", hero.atk)
+    col2.metric("防禦", hero.defense)
 
     col1, col2 = st.columns(2)
     with col1:
