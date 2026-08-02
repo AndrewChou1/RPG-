@@ -494,6 +494,7 @@ def normalize_ring(ring):
         "name": ring_data.get("name", ring.get("name", "未知戒指")),
         "atk_bonus": ring_data.get("atk_bonus", ring.get("atk_bonus", 0)),
         "def_bonus": ring_data.get("def_bonus", ring.get("def_bonus", 0)),
+        "desc": ring_data.get("desc", ring.get("desc", "")),
     }
 
 
@@ -923,6 +924,7 @@ def render_left_panel():
                     ring_groups[group_key] = {
                         "icon": ring_data.get("icon", "💍"),
                         "name": ring_data.get("name", "未知戒指"),
+                        "desc": ring_data.get("desc", ""),
                         "count": 0,
                         "atk_total": 0,
                         "def_total": 0,
@@ -935,7 +937,7 @@ def render_left_panel():
             for group in ring_groups.values():
                 ring_labels.append(
                     f"{group['icon']} {group['name']}*{group['count']} "
-                    f"[+{group['atk_total']} ATK] [+{group['def_total']} DEF]"
+                    f"[+{group['atk_total']} ATK] [+{group['def_total']} DEF]　{group['desc']}"
                 )
             st.markdown("戒指：<br>" + "<br>".join(ring_labels), unsafe_allow_html=True)
         else:
@@ -1215,6 +1217,8 @@ def render_shop_screen(game):
                     ):
                         buy_item(item_id)
                     st.caption(item["desc"])
+                    if item.get("slot") == "ring":
+                        st.caption("✅ 可重複購買，效果疊加")
                     if item.get("kind") == "equipment":
                         required = CLASSES[next((k for k, v in CLASSES.items() if v["key"] == item["required_class"]), "1")]
                         st.caption(f"職業限定：{required['icon']} {required['name']}")
