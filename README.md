@@ -109,6 +109,45 @@ python -m streamlit run streamlit_demo.py
 - 經驗值滿足條件會升級，提升 HP / MP 上限與攻防。
 - 非 Boss 戰勝利後，可能獲得職業武器或直接自動裝備。
 
+#### 攻擊與傷害計算公式
+
+為了方便理解，攻擊可以拆成兩層：
+
+1. 角色面板攻擊力（ATK）
+2. 回合中實際造成的傷害（Damage）
+
+角色 ATK 來源：
+
+- 基礎攻擊（職業初始值）
+- 升級加成（每升 1 級，攻擊 +2）
+- 武器加成
+- 武器強化加成（每級強化 +2，最高 +3）
+- 帽子 / 配件 / 戒指加成（戒指可疊加）
+
+可寫成：
+
+$$
+ATK = BaseATK + 2 \times (Level-1) + Weapon + Upgrade + Hat + Accessory + Rings
+$$
+
+玩家普通攻擊傷害：
+
+$$
+Damage = \max(1,\; ATK + \text{rand}(-2,3) - EnemyDEF)
+$$
+
+玩家技能傷害：
+
+$$
+Damage = \max\left(1,\; \text{round}(ATK \times SkillMult) + \text{rand}(-1,4) - \text{round}(EnemyDEF \times 0.6)\right)
+$$
+
+補充：
+
+- $\text{rand}(a,b)$ 代表在區間 $[a,b]$ 內的整數隨機值。
+- $\max(1,\cdot)$ 代表最少都會造成 1 點傷害，不會出現 0 傷害。
+- 敵人的普通攻擊與技能也有類似公式，但技能對玩家防禦採用約 55% 的折抵（$\text{round}(DEF \times 0.55)$）。
+
 ### 4. 商店與裝備養成
 
 商店中可進行三種強化方向：
