@@ -47,9 +47,9 @@ WEAPONS = {
 }
 
 ACCESSORIES = {
-    "crystal_ball": {"key": "crystal_ball", "name": "水晶球", "icon": "🔮", "required_class": "mage", "mp_bonus": 10, "atk_bonus": 0, "def_bonus": 0, "desc": "法師的神秘道具，讓魔力更為集中。"},
-    "cloak": {"key": "cloak", "name": "披風", "icon": "🧥", "required_class": "rogue", "atk_bonus": 1, "def_bonus": 1, "desc": "盜賊的隱匿披風，讓行動更靈巧。"},
-    "shield": {"key": "shield", "name": "盾", "icon": "🛡️", "required_class": "warrior", "atk_bonus": 0, "def_bonus": 2, "desc": "戰士的堅固護盾，能更好地承受打擊。"},
+    "crystal_ball": {"key": "crystal_ball", "name": "水晶球", "icon": "🔮", "required_class": "mage", "mp_bonus": 20, "atk_bonus": 0, "def_bonus": 0, "desc": "法師的神秘道具，讓魔力更為集中。"},
+    "cloak": {"key": "cloak", "name": "披風", "icon": "🧥", "required_class": "rogue", "hp_bonus": 10, "mp_bonus": 10, "atk_bonus": 0, "def_bonus": 0, "desc": "盜賊的隱匿披風，提升生存與續戰能力。"},
+    "shield": {"key": "shield", "name": "盾", "icon": "🛡️", "required_class": "warrior", "hp_bonus": 20, "atk_bonus": 0, "def_bonus": 0, "desc": "戰士的堅固護盾，提升 20 點 HP 上限。"},
     "abyss_guard": {"key": "abyss_guard", "name": "深淵護印", "icon": "🛡️", "required_class": "warrior", "atk_bonus": 1, "def_bonus": 4, "desc": "深淵王殞落後留下的護印，大幅強化防禦。"},
     "abyss_focus": {"key": "abyss_focus", "name": "深淵聚焦晶", "icon": "🔮", "required_class": "mage", "mp_bonus": 8, "atk_bonus": 3, "def_bonus": 1, "desc": "吸納地城魔力的晶核，強化法術輸出。"},
     "abyss_step": {"key": "abyss_step", "name": "深淵影靴", "icon": "🥾", "required_class": "rogue", "atk_bonus": 3, "def_bonus": 2, "desc": "沾染深淵氣息的影靴，讓步伐更致命。"},
@@ -89,9 +89,9 @@ SHOP_ITEMS = {
     "1": {"key": "potion", "name": "治療藥水", "desc": "恢復 30 點 HP", "price": 12, "icon": "🧪", "kind": "consumable"},
     "2": {"key": "ether", "name": "魔力藥水", "desc": "恢復 20 點 MP", "price": 12, "icon": "💠", "kind": "consumable"},
     "3": {"key": "elixir", "name": "萬能藥", "desc": "完全恢復 HP / MP", "price": 35, "icon": "✨", "kind": "consumable"},
-    "4": {"key": "crystal_ball", "name": "水晶球", "desc": "法師專用的神秘道具", "price": 24, "icon": "🔮", "kind": "equipment", "required_class": "mage"},
-    "5": {"key": "cloak", "name": "披風", "desc": "盜賊專用的隱匿披風", "price": 22, "icon": "🧥", "kind": "equipment", "required_class": "rogue"},
-    "6": {"key": "shield", "name": "盾", "desc": "戰士專用的堅固護盾", "price": 26, "icon": "🛡️", "kind": "equipment", "required_class": "warrior", "slot": "accessory"},
+    "4": {"key": "crystal_ball", "name": "水晶球", "desc": "法師專用的神秘道具，提升 20 點 MP 上限", "price": 24, "icon": "🔮", "kind": "equipment", "required_class": "mage"},
+    "5": {"key": "cloak", "name": "披風", "desc": "盜賊專用的隱匿披風，提升 10 點 HP 與 10 點 MP，上下其手更從容", "price": 22, "icon": "🧥", "kind": "equipment", "required_class": "rogue"},
+    "6": {"key": "shield", "name": "盾", "desc": "戰士專用的堅固護盾，提升 20 點 HP 上限", "price": 26, "icon": "🛡️", "kind": "equipment", "required_class": "warrior", "slot": "accessory"},
     "7": {"key": "ring_of_fortitude", "name": "勇士之戒", "desc": "強化守備，讓戰士更能扛住攻擊。", "price": 28, "icon": "💍", "kind": "equipment", "required_class": "warrior", "slot": "ring"},
     "8": {"key": "ring_of_arcana", "name": "秘法之戒", "desc": "提升魔力與法術精通。", "price": 28, "icon": "💍", "kind": "equipment", "required_class": "mage", "slot": "ring"},
     "9": {"key": "ring_of_shadow", "name": "影舞之戒", "desc": "加強靈巧與突襲能力。", "price": 28, "icon": "💍", "kind": "equipment", "required_class": "rogue", "slot": "ring"},
@@ -264,17 +264,25 @@ class Hero:
         previous = self.equipment.get("accessory")
         if previous and previous.get("key") == equipment_key:
             return True
+        new_hp_bonus = equipment.get("hp_bonus", 0)
         new_mp_bonus = equipment.get("mp_bonus", 0)
+        new_skill_mult_bonus = equipment.get("skill_mult_bonus", 0.0)
         if previous:
             self.atk -= previous.get("atk_bonus", 0)
             self.defense -= previous.get("def_bonus", 0)
+            self.hp_max -= previous.get("hp_bonus", 0)
+            self.hp = min(self.hp, self.hp_max)
             self.mp_max -= previous.get("mp_bonus", 0)
             self.mp = min(self.mp, self.mp_max)
+            self.skill_mult -= previous.get("skill_mult_bonus", 0.0)
         self.equipment["accessory"] = equipment
         self.atk += equipment.get("atk_bonus", 0)
         self.defense += equipment.get("def_bonus", 0)
+        self.hp_max += new_hp_bonus
+        self.hp = min(self.hp + new_hp_bonus, self.hp_max)
         self.mp_max += new_mp_bonus
         self.mp = min(self.mp + new_mp_bonus, self.mp_max)
+        self.skill_mult += new_skill_mult_bonus
         return True
 
     def equip_hat(self, hat_key):
@@ -458,6 +466,29 @@ def ensure_game_state():
         if hero.equipment.get("hat") is None and legacy_accessory and legacy_accessory.get("key") in HATS:
             hero.equipment["hat"] = HATS[legacy_accessory["key"]]
             hero.equipment["accessory"] = None
+        accessory = hero.equipment.get("accessory")
+        if accessory and accessory.get("key") in ACCESSORIES:
+            canonical = ACCESSORIES[accessory["key"]]
+            old_hp_bonus = accessory.get("hp_bonus", 0)
+            old_mp_bonus = accessory.get("mp_bonus", 0)
+            old_atk_bonus = accessory.get("atk_bonus", 0)
+            old_def_bonus = accessory.get("def_bonus", 0)
+            old_skill_bonus = accessory.get("skill_mult_bonus", 0.0)
+
+            new_hp_bonus = canonical.get("hp_bonus", 0)
+            new_mp_bonus = canonical.get("mp_bonus", 0)
+            new_atk_bonus = canonical.get("atk_bonus", 0)
+            new_def_bonus = canonical.get("def_bonus", 0)
+            new_skill_bonus = canonical.get("skill_mult_bonus", 0.0)
+
+            hero.hp_max += new_hp_bonus - old_hp_bonus
+            hero.mp_max += new_mp_bonus - old_mp_bonus
+            hero.atk += new_atk_bonus - old_atk_bonus
+            hero.defense += new_def_bonus - old_def_bonus
+            hero.skill_mult += new_skill_bonus - old_skill_bonus
+            hero.hp = min(hero.hp, hero.hp_max)
+            hero.mp = min(hero.mp, hero.mp_max)
+            hero.equipment["accessory"] = canonical
 
 
 def save_game(game=None):
@@ -906,12 +937,17 @@ def render_left_panel():
             st.caption("帽子：尚未裝備")
         if accessory:
             bonus_text = []
+            if accessory.get("hp_bonus", 0):
+                bonus_text.append(f"+{accessory['hp_bonus']} HP")
             if accessory.get("mp_bonus", 0):
                 bonus_text.append(f"+{accessory['mp_bonus']} MP")
             if accessory.get("atk_bonus", 0):
                 bonus_text.append(f"+{accessory['atk_bonus']} ATK")
             if accessory.get("def_bonus", 0):
                 bonus_text.append(f"+{accessory['def_bonus']} DEF")
+            if accessory.get("skill_mult_bonus", 0):
+                skill_percent = int(round(accessory["skill_mult_bonus"] * 100))
+                bonus_text.append(f"技能 +{skill_percent}%")
             st.markdown(
                 f"<span style='color:#000000;'>配件：{accessory['icon']} {accessory['name']} {' '.join(bonus_text)}</span>",
                 unsafe_allow_html=True,
