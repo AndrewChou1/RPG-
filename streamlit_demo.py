@@ -400,6 +400,7 @@ class Enemy:
         self.skill_mult = data.get("skill_mult", 1.0)
         self.skill_rate = data.get("skill_rate", 0.0)
         self.is_boss = is_boss
+        self.first_turn = True
 
     def is_alive(self):
         return self.hp > 0
@@ -744,7 +745,9 @@ def resolve_enemy_turn(game):
         save_game(game)
         return game
 
-    if enemy.can_cast_skill():
+    force_skill = enemy.is_boss and getattr(enemy, "first_turn", False) and enemy.skill_name and enemy.mp >= enemy.skill_mp
+    enemy.first_turn = False
+    if force_skill or enemy.can_cast_skill():
         enemy.mp = clamp(enemy.mp - enemy.skill_mp, 0, enemy.mp_max)
         damage = max(
             1,
